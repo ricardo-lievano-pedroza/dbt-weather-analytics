@@ -118,12 +118,81 @@ Actions -> MotherDuck smoke test -> Run workflow
 
 The workflow verifies that GitHub can connect to MotherDuck, bootstrap the database objects, and parse the dbt project.
 
+## Extract And Load Raw Open-Meteo Data
+
+The raw pipeline has two scripts:
+
+```text
+scripts/extract_open_meteo.py
+scripts/load_raw_to_motherduck.py
+```
+
+The extractor pulls Europe-wide weather and air quality data from Open-Meteo and writes four CSV files:
+
+```text
+data/raw/raw_locations.csv
+data/raw/raw_weather_daily.csv
+data/raw/raw_forecast_daily.csv
+data/raw/raw_air_quality_hourly.csv
+```
+
+Run the extraction locally:
+
+```bash
+python scripts/extract_open_meteo.py --output-dir data/raw --past-days 92 --forecast-days 7
+```
+
+Load the CSV files into MotherDuck:
+
+```bash
+python scripts/load_raw_to_motherduck.py --input-dir data/raw
+```
+
+The loader writes to:
+
+```text
+raw.raw_locations
+raw.raw_weather_daily
+raw.raw_forecast_daily
+raw.raw_air_quality_hourly
+```
+
+The default load mode upserts by natural key:
+
+- `raw_locations`: `location_id`
+- `raw_weather_daily`: `location_id`, `date`
+- `raw_forecast_daily`: `location_id`, `date`, `extracted_at`
+- `raw_air_quality_hourly`: `location_id`, `timestamp`
+
+This keeps the raw tables rerunnable while preserving separate forecast snapshots from different extraction runs.
+
+To fully replace all rows in each raw table, use:
+
+```bash
+python scripts/load_raw_to_motherduck.py --input-dir data/raw --replace
+```
+
+## GitHub Raw Load Workflow
+
+The repository includes a cloud workflow:
+
+```text
+.github/workflows/open-meteo-raw-load.yml
+```
+
+It runs the extract and load pipeline using the `MOTHERDUCK_TOKEN` repository secret.
+
+After the workflow is merged into `main`, it can run:
+
+- manually from the GitHub Actions tab
+- automatically every day at `06:20 UTC`
+
+The workflow also runs on pushes to the `open-meteo-extraction-load` branch for validation before merging.
+
 ## Next Work
 
 The next project pieces are:
 
-- build the Open-Meteo extraction script for selected European cities
-- load extracted files into the `raw` schema
 - create dbt staging models from the registered sources
 - build intermediate and mart models
 - connect a public Streamlit dashboard to the final mart tables

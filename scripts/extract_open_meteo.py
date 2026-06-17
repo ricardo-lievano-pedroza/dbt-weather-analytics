@@ -22,6 +22,7 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
@@ -29,8 +30,30 @@ from urllib.request import Request, urlopen
 GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 AIR_QUALITY_URL = "https://air-quality-api.open-meteo.com/v1/air-quality"
+MAX_HTTP_ATTEMPTS = 3
+REQUEST_TIMEOUT_SECONDS = 15
+RETRY_STATUS_CODES = {408, 429, 500, 502, 503, 504}
 
-DEFAULT_CITIES = ["Madrid", "Barcelona", "Valencia", "Sevilla", "Bilbao"]
+DEFAULT_CITIES = [
+    "Amsterdam",
+    "Athens",
+    "Barcelona",
+    "Berlin",
+    "Copenhagen",
+    "Dublin",
+    "Lisbon",
+    "London",
+    "Madrid",
+    "Milan",
+    "Oslo",
+    "Paris",
+    "Prague",
+    "Rome",
+    "Stockholm",
+    "Vienna",
+    "Warsaw",
+    "Zurich",
+]
 DEFAULT_DAILY_WEATHER_VARIABLES = [
     "temperature_2m_max",
     "temperature_2m_min",
@@ -74,7 +97,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--output-dir",
-        default="data/raw/open_meteo",
+        default="data/raw",
         help="Directory where CSV files will be written.",
     )
     parser.add_argument(
@@ -93,15 +116,45 @@ def parse_args() -> argparse.Namespace:
 
 def get_json(url: str, params: dict[str, Any]) -> dict[str, Any]:
     query_string = urlencode(params, doseq=True)
-    request = Request(
-        f"{url}?{query_string}",
-        headers={"User-Agent": "dbt-ie-open-meteo-assignment/1.0"},
-    )
+    request_url = f"{url}?{query_string}"
+    last_error: Exception | None = None
 
-    with urlopen(request, timeout=30, context=get_ssl_context()) as response:
-        payload = response.read().decode("utf-8")
+    for attempt in range(1, MAX_HTTP_ATTEMPTS + 1):
+        request = Request(
+            request_url,
+            headers={"User-Agent": "dbt-ie-open-meteo-assignment/1.0"},
+        )
 
-    return json.loads(payload)
+        try:
+            with urlopen(
+                request,
+                timeout=REQUEST_TIMEOUT_SECONDS,
+                context=get_ssl_context(),
+            ) as response:
+                payload = response.read().decode("utf-8")
+            return json.loads(payload)
+        except HTTPError as exc:
+            last_error = exc
+            should_retry = exc.code in RETRY_STATUS_CODES
+            if not should_retry or attempt == MAX_HTTP_ATTEMPTS:
+                raise RuntimeError(
+                    f"Open-Meteo request failed with HTTP {exc.code}: {request_url}"
+                ) from exc
+        except (TimeoutError, URLError, json.JSONDecodeError) as exc:
+            last_error = exc
+            if attempt == MAX_HTTP_ATTEMPTS:
+                raise RuntimeError(
+                    f"Open-Meteo request failed after {attempt} attempts: {request_url}"
+                ) from exc
+
+        wait_seconds = min(2 ** (attempt - 1), 10)
+        print(
+            f"Request failed on attempt {attempt}; retrying in {wait_seconds}s",
+            file=sys.stderr,
+        )
+        time.sleep(wait_seconds)
+
+    raise RuntimeError(f"Open-Meteo request failed: {request_url}") from last_error
 
 
 def get_ssl_context() -> ssl.SSLContext:
