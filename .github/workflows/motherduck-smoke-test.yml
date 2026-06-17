@@ -2,6 +2,9 @@ name: MotherDuck smoke test
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - motherduck-database-setup
 
 jobs:
   motherduck-smoke-test:
