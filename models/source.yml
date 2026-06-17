@@ -1,16 +1,13 @@
 version: 2
 
 sources:
-  - name: open_meteo
-    database: "{{ env_var('MOTHERDUCK_DATABASE', 'open_meteo_europe') }}"
-    schema: raw
-    description: Raw Open-Meteo data loaded into MotherDuck.
+  - name: weather_local
+    schema: main
+    description: Raw Open-Meteo data loaded into the local DuckDB database (main schema).
     tables:
       - name: raw_locations
         description: One row per selected city from the Open-Meteo Geocoding API.
         columns:
-          - name: extracted_at
-            description: UTC timestamp when the extraction ran.
           - name: location_id
             description: Open-Meteo geocoding location identifier.
           - name: city_name
@@ -31,6 +28,8 @@ sources:
             description: City elevation in meters.
           - name: population
             description: Population returned by the geocoding API, when available.
+          - name: extracted_at
+            description: UTC timestamp when the extraction ran, stored as ISO-8601 text.
 
       - name: raw_weather_daily
         description: One row per city per day for recent daily weather.
@@ -38,7 +37,7 @@ sources:
           - name: source_name
             description: Extraction source label.
           - name: extracted_at
-            description: UTC timestamp when the extraction ran.
+            description: UTC timestamp when the extraction ran, stored as ISO-8601 text.
           - name: location_id
             description: Open-Meteo geocoding location identifier.
           - name: city_name
@@ -46,7 +45,7 @@ sources:
           - name: country_code
             description: City country code.
           - name: date
-            description: Local weather date.
+            description: Local weather date, stored as ISO-8601 text.
           - name: latitude
             description: Latitude used in the weather API call.
           - name: longitude
@@ -74,7 +73,7 @@ sources:
           - name: source_name
             description: Extraction source label.
           - name: extracted_at
-            description: UTC timestamp when the forecast extraction ran.
+            description: UTC timestamp when the forecast extraction ran, stored as ISO-8601 text.
           - name: location_id
             description: Open-Meteo geocoding location identifier.
           - name: city_name
@@ -82,7 +81,7 @@ sources:
           - name: country_code
             description: City country code.
           - name: date
-            description: Forecast date.
+            description: Forecast date, stored as ISO-8601 text.
           - name: latitude
             description: Latitude used in the forecast API call.
           - name: longitude
@@ -110,7 +109,7 @@ sources:
           - name: source_name
             description: Extraction source label.
           - name: extracted_at
-            description: UTC timestamp when the extraction ran.
+            description: UTC timestamp when the extraction ran, stored as ISO-8601 text.
           - name: location_id
             description: Open-Meteo geocoding location identifier.
           - name: city_name
@@ -118,7 +117,7 @@ sources:
           - name: country_code
             description: City country code.
           - name: timestamp
-            description: Local hourly timestamp.
+            description: Local hourly timestamp, stored as ISO-8601 text.
           - name: latitude
             description: Latitude used in the air quality API call.
           - name: longitude
