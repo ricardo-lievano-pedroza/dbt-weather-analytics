@@ -51,7 +51,7 @@ jobs:
             --output-dir data/raw \
             --past-days 92 \
             --forecast-days 7 \
-            --pause-seconds 0.2
+            --pause-seconds 0.5
 
       - name: Load raw data to MotherDuck
         run: python scripts/load_raw_to_motherduck.py --input-dir data/raw
