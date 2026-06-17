@@ -30,7 +30,8 @@ from urllib.request import Request, urlopen
 GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 AIR_QUALITY_URL = "https://air-quality-api.open-meteo.com/v1/air-quality"
-MAX_HTTP_ATTEMPTS = 5
+MAX_HTTP_ATTEMPTS = 3
+REQUEST_TIMEOUT_SECONDS = 15
 RETRY_STATUS_CODES = {408, 429, 500, 502, 503, 504}
 
 DEFAULT_CITIES = [
@@ -125,7 +126,11 @@ def get_json(url: str, params: dict[str, Any]) -> dict[str, Any]:
         )
 
         try:
-            with urlopen(request, timeout=30, context=get_ssl_context()) as response:
+            with urlopen(
+                request,
+                timeout=REQUEST_TIMEOUT_SECONDS,
+                context=get_ssl_context(),
+            ) as response:
                 payload = response.read().decode("utf-8")
             return json.loads(payload)
         except HTTPError as exc:

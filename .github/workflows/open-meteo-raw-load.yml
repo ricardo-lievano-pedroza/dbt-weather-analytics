@@ -48,6 +48,7 @@ jobs:
       - name: Extract Open-Meteo data
         run: |
           python scripts/extract_open_meteo.py \
+            --cities Amsterdam Athens Barcelona Berlin Copenhagen Lisbon London Madrid Paris Rome Stockholm Warsaw \
             --output-dir data/raw \
             --past-days 92 \
             --forecast-days 7 \
