@@ -18,11 +18,11 @@ clean-targets:
 models:
   dbt_weather_analytics:
     staging:
-      + schema: staging
-      + materialized: view
+      +schema: staging
+      +materialized: view
     intermediate:
-      + schema: intermediate
-      + materialized: table
+      +schema: intermediate
+      +materialized: table
     marts:
-      + schema: marts
-      + materialized: table
+      +schema: marts
+      +materialized: table
