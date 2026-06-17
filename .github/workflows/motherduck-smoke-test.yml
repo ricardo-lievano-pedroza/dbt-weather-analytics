@@ -1,0 +1,39 @@
+name: MotherDuck smoke test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  motherduck-smoke-test:
+    runs-on: ubuntu-latest
+    env:
+      MOTHERDUCK_DATABASE: open_meteo_europe
+      MOTHERDUCK_TOKEN: ${{ secrets.MOTHERDUCK_TOKEN }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check required secret
+        run: |
+          if [ -z "$MOTHERDUCK_TOKEN" ]; then
+            echo "Repository secret MOTHERDUCK_TOKEN is not set."
+            exit 1
+          fi
+
+      - name: Install Python dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Bootstrap MotherDuck database
+        run: python scripts/bootstrap_motherduck.py
+
+      - name: Check dbt connection
+        run: dbt debug --profiles-dir .
+
+      - name: Parse dbt project
+        run: dbt parse --profiles-dir .
