@@ -2,7 +2,7 @@ name: dbt_weather_analytics
 version: "1.0.0"
 config-version: 2
 
-profile: dbt_weather_analytics
+profile: 'dbt_weather_analytics'
 
 model-paths: ["models"]
 analysis-paths: ["analyses"]

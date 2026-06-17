@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Extract starter Open-Meteo data for the group assignment.
 
-The script writes four CSV files:
-- raw_locations.csv
-- raw_weather_daily.csv
-- raw_forecast_daily.csv
-- raw_air_quality_hourly.csv
+The script writes four Parquet files:
+- raw_locations.parquet
+- raw_weather_daily.parquet
+- raw_forecast_daily.parquet
+- raw_air_quality_hourly.parquet
 
 It uses the Python standard library for HTTP requests. If certifi is installed,
 the script uses it to avoid certificate issues on some local Python installs.
@@ -14,7 +14,6 @@ the script uses it to avoid certificate issues on some local Python installs.
 from __future__ import annotations
 
 import argparse
-import csv
 import json
 import ssl
 import sys
@@ -24,6 +23,9 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
+
+import pyarrow as pa
+import pyarrow.parquet as pq
 
 
 GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
@@ -75,7 +77,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output-dir",
         default="data/raw/open_meteo",
-        help="Directory where CSV files will be written.",
+        help="Directory where Parquet files will be written.",
     )
     parser.add_argument(
         "--pause-seconds",
@@ -250,18 +252,15 @@ def fetch_air_quality(location: dict[str, Any], extracted_at: str) -> list[dict[
     return build_hourly_rows(payload, location, extracted_at, "air_quality")
 
 
-def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
+def write_parquet(path: Path, rows: list[dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
 
     if not rows:
-        path.write_text("", encoding="utf-8")
+        pq.write_table(pa.table({}), path)
         return
 
-    fieldnames = list(rows[0].keys())
-    with path.open("w", newline="", encoding="utf-8") as file:
-        writer = csv.DictWriter(file, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(rows)
+    table = pa.Table.from_pylist(rows)
+    pq.write_table(table, path)
 
 
 def main() -> int:
@@ -291,10 +290,10 @@ def main() -> int:
         air_quality_hourly_rows.extend(fetch_air_quality(location, extracted_at))
         time.sleep(args.pause_seconds)
 
-    write_csv(output_dir / "raw_locations.csv", locations)
-    write_csv(output_dir / "raw_weather_daily.csv", weather_daily_rows)
-    write_csv(output_dir / "raw_forecast_daily.csv", forecast_daily_rows)
-    write_csv(output_dir / "raw_air_quality_hourly.csv", air_quality_hourly_rows)
+    write_parquet(output_dir / "raw_locations.parquet", locations)
+    write_parquet(output_dir / "raw_weather_daily.parquet", weather_daily_rows)
+    write_parquet(output_dir / "raw_forecast_daily.parquet", forecast_daily_rows)
+    write_parquet(output_dir / "raw_air_quality_hourly.parquet", air_quality_hourly_rows)
 
     print(f"Wrote {len(locations):,} locations", file=sys.stderr)
     print(f"Wrote {len(weather_daily_rows):,} recent daily weather rows", file=sys.stderr)

@@ -3,6 +3,5 @@ dbt_weather_analytics:
   outputs:
     dev:
       type: duckdb
-      path: "md:{{ env_var('MOTHERDUCK_DATABASE', 'open_meteo_europe') }}?motherduck_token={{ env_var('MOTHERDUCK_TOKEN') }}"
-      schema: marts
-      threads: 4
+      path: my_database.duckdb
+      schema: main

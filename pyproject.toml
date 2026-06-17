@@ -8,7 +8,7 @@ dependencies = [
     "dbt-core==1.8.0",
     "dbt-duckdb>=1.8.0",
     "polars>=0.20.0",
-    "duckdb==0.10.2",
+    "duckdb==1.5.3",
     "pandas",
     "ipykernel",
     "numpy",
