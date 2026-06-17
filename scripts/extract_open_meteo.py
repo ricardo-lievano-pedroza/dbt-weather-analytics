@@ -30,7 +30,26 @@ GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 AIR_QUALITY_URL = "https://air-quality-api.open-meteo.com/v1/air-quality"
 
-DEFAULT_CITIES = ["Madrid", "Barcelona", "Valencia", "Sevilla", "Bilbao"]
+DEFAULT_CITIES = [
+    "Amsterdam",
+    "Athens",
+    "Barcelona",
+    "Berlin",
+    "Copenhagen",
+    "Dublin",
+    "Lisbon",
+    "London",
+    "Madrid",
+    "Milan",
+    "Oslo",
+    "Paris",
+    "Prague",
+    "Rome",
+    "Stockholm",
+    "Vienna",
+    "Warsaw",
+    "Zurich",
+]
 DEFAULT_DAILY_WEATHER_VARIABLES = [
     "temperature_2m_max",
     "temperature_2m_min",
@@ -74,7 +93,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--output-dir",
-        default="data/raw/open_meteo",
+        default="data/raw",
         help="Directory where CSV files will be written.",
     )
     parser.add_argument(
