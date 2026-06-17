@@ -1,3 +1,17 @@
+.env
+.venv/
+__pycache__/
+*.py[cod]
+
+target/
+dbt_packages/
+logs/
+
+*.duckdb
+*.duckdb.wal
+*.duckdb.tmp
+
+data/raw/open_meteo/*.csv
 # Database files — regenerated from data/*.parquet via create_db.py
 *.db
 *.duckdb

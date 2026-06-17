@@ -1,0 +1,139 @@
+version: 2
+
+sources:
+  - name: open_meteo
+    database: "{{ env_var('MOTHERDUCK_DATABASE', 'open_meteo_europe') }}"
+    schema: raw
+    description: Raw Open-Meteo data loaded into MotherDuck.
+    tables:
+      - name: raw_locations
+        description: One row per selected city from the Open-Meteo Geocoding API.
+        columns:
+          - name: extracted_at
+            description: UTC timestamp when the extraction ran.
+          - name: location_id
+            description: Open-Meteo geocoding location identifier.
+          - name: city_name
+            description: City name returned by the geocoding result.
+          - name: country
+            description: Country name.
+          - name: country_code
+            description: ISO-style country code from Open-Meteo.
+          - name: admin1
+            description: First-level administrative area.
+          - name: latitude
+            description: City latitude.
+          - name: longitude
+            description: City longitude.
+          - name: timezone
+            description: Local timezone returned by Open-Meteo.
+          - name: elevation
+            description: City elevation in meters.
+          - name: population
+            description: Population returned by the geocoding API, when available.
+
+      - name: raw_weather_daily
+        description: One row per city per day for recent daily weather.
+        columns:
+          - name: source_name
+            description: Extraction source label.
+          - name: extracted_at
+            description: UTC timestamp when the extraction ran.
+          - name: location_id
+            description: Open-Meteo geocoding location identifier.
+          - name: city_name
+            description: City name.
+          - name: country_code
+            description: City country code.
+          - name: date
+            description: Local weather date.
+          - name: latitude
+            description: Latitude used in the weather API call.
+          - name: longitude
+            description: Longitude used in the weather API call.
+          - name: timezone
+            description: Timezone used in the weather API call.
+          - name: temperature_2m_max
+            description: Maximum daily temperature at 2 meters, Celsius.
+          - name: temperature_2m_min
+            description: Minimum daily temperature at 2 meters, Celsius.
+          - name: temperature_2m_mean
+            description: Mean daily temperature at 2 meters, Celsius.
+          - name: precipitation_sum
+            description: Total daily precipitation, millimeters.
+          - name: rain_sum
+            description: Total daily rain, millimeters.
+          - name: snowfall_sum
+            description: Total daily snowfall, centimeters water equivalent from Open-Meteo.
+          - name: wind_speed_10m_max
+            description: Maximum daily wind speed at 10 meters.
+
+      - name: raw_forecast_daily
+        description: One row per city per forecast date per extraction run.
+        columns:
+          - name: source_name
+            description: Extraction source label.
+          - name: extracted_at
+            description: UTC timestamp when the forecast extraction ran.
+          - name: location_id
+            description: Open-Meteo geocoding location identifier.
+          - name: city_name
+            description: City name.
+          - name: country_code
+            description: City country code.
+          - name: date
+            description: Forecast date.
+          - name: latitude
+            description: Latitude used in the forecast API call.
+          - name: longitude
+            description: Longitude used in the forecast API call.
+          - name: timezone
+            description: Timezone used in the forecast API call.
+          - name: temperature_2m_max
+            description: Forecasted maximum daily temperature at 2 meters, Celsius.
+          - name: temperature_2m_min
+            description: Forecasted minimum daily temperature at 2 meters, Celsius.
+          - name: temperature_2m_mean
+            description: Forecasted mean daily temperature at 2 meters, Celsius.
+          - name: precipitation_sum
+            description: Forecasted total daily precipitation, millimeters.
+          - name: rain_sum
+            description: Forecasted total daily rain, millimeters.
+          - name: snowfall_sum
+            description: Forecasted total daily snowfall.
+          - name: wind_speed_10m_max
+            description: Forecasted maximum daily wind speed at 10 meters.
+
+      - name: raw_air_quality_hourly
+        description: One row per city per hour for air quality metrics.
+        columns:
+          - name: source_name
+            description: Extraction source label.
+          - name: extracted_at
+            description: UTC timestamp when the extraction ran.
+          - name: location_id
+            description: Open-Meteo geocoding location identifier.
+          - name: city_name
+            description: City name.
+          - name: country_code
+            description: City country code.
+          - name: timestamp
+            description: Local hourly timestamp.
+          - name: latitude
+            description: Latitude used in the air quality API call.
+          - name: longitude
+            description: Longitude used in the air quality API call.
+          - name: timezone
+            description: Timezone used in the air quality API call.
+          - name: pm10
+            description: PM10 concentration.
+          - name: pm2_5
+            description: PM2.5 concentration.
+          - name: carbon_monoxide
+            description: Carbon monoxide concentration.
+          - name: nitrogen_dioxide
+            description: Nitrogen dioxide concentration.
+          - name: ozone
+            description: Ozone concentration.
+          - name: european_aqi
+            description: European Air Quality Index value.
