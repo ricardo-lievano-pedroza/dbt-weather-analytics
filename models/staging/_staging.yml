@@ -1,0 +1,76 @@
+version: 2
+
+models:
+  - name: stg_locations
+    description: >
+      One row per city (location_id), deduplicated to the most recently
+      extracted geocoding result. Grain: location_id.
+    columns:
+      - name: location_id
+        description: Open-Meteo geocoding location identifier.
+        data_tests:
+          - unique
+          - not_null
+      - name: city_name
+        description: City name returned by the geocoding result.
+        data_tests:
+          - not_null
+
+  - name: stg_weather_daily
+    description: >
+      One row per city per day of actual (already-occurred) daily weather,
+      deduplicated to the most recent extraction per location_id/date.
+      Grain: location_id, date.
+    columns:
+      - name: weather_daily_id
+        description: Surrogate key, location_id concatenated with date.
+        data_tests:
+          - unique
+          - not_null
+      - name: location_id
+        description: Open-Meteo geocoding location identifier.
+        data_tests:
+          - not_null
+      - name: date
+        description: Local weather date.
+        data_tests:
+          - not_null
+
+  - name: stg_forecast_daily
+    description: >
+      One row per city per forecasted day, deduplicated to the most recent
+      extraction per location_id/date. Grain: location_id, date.
+    columns:
+      - name: forecast_daily_id
+        description: Surrogate key, location_id concatenated with date.
+        data_tests:
+          - unique
+          - not_null
+      - name: location_id
+        description: Open-Meteo geocoding location identifier.
+        data_tests:
+          - not_null
+      - name: date
+        description: Forecast date.
+        data_tests:
+          - not_null
+
+  - name: stg_air_quality_hourly
+    description: >
+      One row per city per local hour of air quality measurements,
+      deduplicated to the most recent extraction per location_id/timestamp.
+      Grain: location_id, timestamp.
+    columns:
+      - name: air_quality_hourly_id
+        description: Surrogate key, location_id concatenated with timestamp.
+        data_tests:
+          - unique
+          - not_null
+      - name: location_id
+        description: Open-Meteo geocoding location identifier.
+        data_tests:
+          - not_null
+      - name: timestamp
+        description: Local hourly timestamp.
+        data_tests:
+          - not_null
