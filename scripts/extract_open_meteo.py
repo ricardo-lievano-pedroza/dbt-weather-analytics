@@ -30,7 +30,16 @@ GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 AIR_QUALITY_URL = "https://air-quality-api.open-meteo.com/v1/air-quality"
 
-DEFAULT_CITIES = ["Madrid", "Barcelona", "Valencia", "Sevilla", "Bilbao"]
+DEFAULT_CITIES = [
+    "Madrid",
+    "Lisbon",
+    "Paris",
+    "Berlin",
+    "Amsterdam",
+    "Brussels",
+    "London",
+    "Rome",
+]
 DEFAULT_DAILY_WEATHER_VARIABLES = [
     "temperature_2m_max",
     "temperature_2m_min",
