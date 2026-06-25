@@ -56,6 +56,9 @@ jobs:
 
       - name: Load raw data to MotherDuck
         run: python scripts/load_raw_to_motherduck.py --input-dir data/raw
+        
+      - name: Install dbt packages
+        run: dbt deps --profiles-dir .
 
       - name: Check dbt connection
         run: dbt debug --profiles-dir .
