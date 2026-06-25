@@ -30,6 +30,9 @@ from urllib.request import Request, urlopen
 GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 AIR_QUALITY_URL = "https://air-quality-api.open-meteo.com/v1/air-quality"
+MAX_HTTP_ATTEMPTS = 3
+REQUEST_TIMEOUT_SECONDS = 15
+RETRY_STATUS_CODES = {408, 429, 500, 502, 503, 504}
 
 DEFAULT_CITIES = [
     "Madrid",
