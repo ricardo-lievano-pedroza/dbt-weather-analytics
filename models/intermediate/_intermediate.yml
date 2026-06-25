@@ -1,0 +1,116 @@
+version: 2
+
+models:
+  - name: int_air_quality_daily
+    description: >
+      Hourly air quality rolled up to one row per city per local date, with
+      average and peak European AQI and pollutant concentrations.
+      Grain: location_id, date.
+    columns:
+      - name: air_quality_daily_id
+        description: Surrogate key, location_id concatenated with date.
+        data_tests:
+          - unique
+          - not_null
+      - name: location_id
+        description: Open-Meteo geocoding location identifier.
+        data_tests:
+          - not_null
+      - name: date
+        description: Local date the hourly measurements were aggregated over.
+        data_tests:
+          - not_null
+      - name: hours_observed
+        description: Number of hourly readings aggregated into the day.
+        data_tests:
+          - not_null
+
+  - name: int_city_day_weather
+    description: >
+      Actual daily weather joined to city/location attributes such as country,
+      admin area, coordinates, timezone, elevation and population.
+      Grain: location_id, date.
+    columns:
+      - name: weather_daily_id
+        description: Surrogate key inherited from stg_weather_daily.
+        data_tests:
+          - unique
+          - not_null
+      - name: location_id
+        description: Open-Meteo geocoding location identifier.
+        data_tests:
+          - not_null
+      - name: date
+        description: Local weather date.
+        data_tests:
+          - not_null
+      - name: city_name
+        description: City name from the location dimension.
+        data_tests:
+          - not_null
+
+  - name: int_weather_flags
+    description: >
+      Daily weather with analytical boolean flags (rainy, hot, windy, poor AQI,
+      comfortable) derived from documented thresholds, joined to daily air
+      quality. Grain: location_id, date.
+    columns:
+      - name: weather_daily_id
+        description: Surrogate key inherited from the weather grain.
+        data_tests:
+          - unique
+          - not_null
+      - name: location_id
+        description: Open-Meteo geocoding location identifier.
+        data_tests:
+          - not_null
+      - name: date
+        description: Local weather date.
+        data_tests:
+          - not_null
+      - name: is_rainy_day
+        description: True when precipitation_sum is at least 1 mm.
+        data_tests:
+          - not_null
+      - name: is_hot_day
+        description: True when temperature_2m_max is at least 30 C.
+        data_tests:
+          - not_null
+      - name: is_windy_day
+        description: True when wind_speed_10m_max is at least 38 km/h.
+        data_tests:
+          - not_null
+      - name: is_poor_aqi_day
+        description: True when max_european_aqi is at least 60 (poor band).
+        data_tests:
+          - not_null
+      - name: is_comfortable_day
+        description: >
+          True when the mean temperature is 18-26 C and the day is not rainy,
+          hot, windy, or poor AQI.
+        data_tests:
+          - not_null
+
+  - name: int_forecast_daily_enriched
+    description: >
+      Daily forecasts enriched with location attributes, the forecast snapshot
+      date, and a forecast horizon (days ahead). Preserves the latest-snapshot
+      grain produced by staging. Grain: location_id, date.
+    columns:
+      - name: forecast_daily_id
+        description: Surrogate key inherited from stg_forecast_daily.
+        data_tests:
+          - unique
+          - not_null
+      - name: location_id
+        description: Open-Meteo geocoding location identifier.
+        data_tests:
+          - not_null
+      - name: date
+        description: Forecast date.
+        data_tests:
+          - not_null
+      - name: forecast_horizon_days
+        description: Days between the forecast snapshot date and the forecast date.
+        data_tests:
+          - not_null
