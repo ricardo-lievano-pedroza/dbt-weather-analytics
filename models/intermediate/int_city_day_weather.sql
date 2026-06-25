@@ -33,6 +33,7 @@ select
     weather.temperature_2m_max,
     weather.temperature_2m_min,
     weather.temperature_2m_mean,
+    weather.temperature_2m_max - weather.temperature_2m_min as temperature_range,
     weather.precipitation_sum,
     weather.rain_sum,
     weather.snowfall_sum,
