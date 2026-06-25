@@ -26,3 +26,14 @@ models:
     marts:
       +schema: marts
       +materialized: table
+
+vars:
+  # Intermediate-layer flag thresholds (single source of truth; tune here).
+  rainy_precip_mm: 1            # precipitation_sum >= this -> rainy day
+  hot_temp_c: 30               # temperature_2m_max >= this -> hot day
+  windy_kmh: 38                # wind_speed_10m_max >= this -> windy day
+  poor_aqi: 60                 # max_european_aqi >= this -> poor AQI day
+  comfortable_temp_min_c: 18   # mean temp lower bound for a comfortable day
+  comfortable_temp_max_c: 26   # mean temp upper bound for a comfortable day
+  freezing_temp_c: 0           # temperature_2m_min <= this -> freezing day
+  complete_aqi_hours: 24       # hours_observed >= this -> complete AQI day

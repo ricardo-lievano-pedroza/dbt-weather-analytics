@@ -1,0 +1,177 @@
+version: 2
+
+models:
+  - name: int_air_quality_daily
+    description: >
+      Hourly air quality rolled up to one row per city per local date, with
+      average and peak European AQI, an AQI band, pollutant concentrations and
+      observation-coverage counts. Grain: location_id, date.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - location_id
+            - date
+    columns:
+      - name: air_quality_daily_id
+        description: Surrogate key, location_id concatenated with date.
+        data_tests:
+          - unique
+          - not_null
+      - name: location_id
+        description: Open-Meteo geocoding location identifier.
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_locations')
+              field: location_id
+      - name: date
+        description: Local date the hourly measurements were aggregated over.
+        data_tests:
+          - not_null
+      - name: hours_observed
+        description: Number of hourly readings aggregated into the day.
+        data_tests:
+          - not_null
+      - name: aqi_hours_observed
+        description: Number of hourly readings with a non-null European AQI value.
+        data_tests:
+          - not_null
+      - name: is_complete_aqi_day
+        description: >
+          True when hours_observed meets the complete_aqi_hours threshold (24),
+          indicating a full day of readings rather than a partial sample.
+        data_tests:
+          - not_null
+      - name: european_aqi_band
+        description: >
+          EEA band (good, fair, moderate, poor, very poor, extremely poor)
+          classified from the daily average European AQI. Null when no AQI data.
+
+  - name: int_city_day_weather
+    description: >
+      Actual daily weather joined to city/location attributes such as country,
+      admin area, coordinates, timezone, elevation and population.
+      Grain: location_id, date.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - location_id
+            - date
+    columns:
+      - name: weather_daily_id
+        description: Surrogate key inherited from stg_weather_daily.
+        data_tests:
+          - unique
+          - not_null
+      - name: location_id
+        description: Open-Meteo geocoding location identifier.
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_locations')
+              field: location_id
+      - name: date
+        description: Local weather date.
+        data_tests:
+          - not_null
+      - name: city_name
+        description: City name from the location dimension.
+        data_tests:
+          - not_null
+      - name: temperature_range
+        description: Daily temperature range, temperature_2m_max minus temperature_2m_min.
+
+  - name: int_weather_flags
+    description: >
+      Daily weather with analytical boolean flags (rainy, hot, windy, freezing,
+      snowy, poor AQI, comfortable) derived from thresholds defined as project
+      vars, joined to daily air quality. Grain: location_id, date.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - location_id
+            - date
+    columns:
+      - name: weather_daily_id
+        description: Surrogate key inherited from the weather grain.
+        data_tests:
+          - unique
+          - not_null
+      - name: location_id
+        description: Open-Meteo geocoding location identifier.
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_locations')
+              field: location_id
+      - name: date
+        description: Local weather date.
+        data_tests:
+          - not_null
+      - name: is_rainy_day
+        description: True when precipitation_sum is at least var('rainy_precip_mm').
+        data_tests:
+          - not_null
+      - name: is_hot_day
+        description: True when temperature_2m_max is at least var('hot_temp_c').
+        data_tests:
+          - not_null
+      - name: is_windy_day
+        description: True when wind_speed_10m_max is at least var('windy_kmh').
+        data_tests:
+          - not_null
+      - name: is_freezing_day
+        description: True when temperature_2m_min is at or below var('freezing_temp_c').
+        data_tests:
+          - not_null
+      - name: is_snowy_day
+        description: True when snowfall_sum is greater than zero.
+        data_tests:
+          - not_null
+      - name: is_poor_aqi_day
+        description: True when max_european_aqi is at least var('poor_aqi').
+        data_tests:
+          - not_null
+      - name: is_comfortable_day
+        description: >
+          True when the mean temperature is within the comfortable range and the
+          day is not rainy, hot, windy, freezing, snowy, or poor AQI.
+        data_tests:
+          - not_null
+
+  - name: int_forecast_daily_enriched
+    description: >
+      Daily forecasts enriched with location attributes, the forecast snapshot
+      date, a forecast horizon (days ahead) and a horizon bucket. Preserves the
+      latest-snapshot grain produced by staging. Grain: location_id, date.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - location_id
+            - date
+    columns:
+      - name: forecast_daily_id
+        description: Surrogate key inherited from stg_forecast_daily.
+        data_tests:
+          - unique
+          - not_null
+      - name: location_id
+        description: Open-Meteo geocoding location identifier.
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_locations')
+              field: location_id
+      - name: date
+        description: Forecast date.
+        data_tests:
+          - not_null
+      - name: forecast_horizon_days
+        description: Days between the forecast snapshot date and the forecast date.
+        data_tests:
+          - not_null
+      - name: forecast_horizon_bucket
+        description: >
+          Bucketed horizon: short (0-3d), medium (4-7d), or long (8d+).
+        data_tests:
+          - not_null
