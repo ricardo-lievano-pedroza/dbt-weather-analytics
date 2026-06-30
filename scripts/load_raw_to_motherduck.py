@@ -18,7 +18,7 @@ except ImportError:  # pragma: no cover - optional local convenience
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_DATABASE = "open_meteo_europe"
+DEFAULT_DATABASE = "open_meteo_europe_sa"
 
 
 @dataclass(frozen=True)

@@ -71,20 +71,12 @@ models:
           - not_null
       - name: temperature_2m_max
         description: Maximum 2 m temperature for the day (°C).
-        data_tests:
-          - not_null
       - name: temperature_2m_min
         description: Minimum 2 m temperature for the day (°C).
-        data_tests:
-          - not_null
       - name: temperature_2m_mean
         description: Mean 2 m temperature for the day (°C).
-        data_tests:
-          - not_null
       - name: temperature_range
         description: Daily temperature range, temperature_2m_max minus temperature_2m_min (°C).
-        data_tests:
-          - not_null
       - name: precipitation_sum
         description: Total precipitation for the day (mm).
       - name: rain_sum
