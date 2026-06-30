@@ -1,0 +1,13 @@
+{
+    "python.defaultInterpreterPath": "${workspaceFolder}/.venv/Scripts/python.exe",
+    "files.watcherExclude": {
+        "**/dbt_packages/**": true,
+        "**/target/**": true,
+        "**/logs/**": true
+    },
+    "search.exclude": {
+        "**/dbt_packages": true,
+        "**/target": true,
+        "**/logs": true
+    }
+}
