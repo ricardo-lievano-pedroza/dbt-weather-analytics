@@ -16,6 +16,8 @@ dependencies = [
     "sqlfluff",
     "sqlfluff-templater-dbt",
     "python-dotenv>=1.2.2",
+    "streamlit",
+    "plotly",
 ]
 
 [tool.uv]

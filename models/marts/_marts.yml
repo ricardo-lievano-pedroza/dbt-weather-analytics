@@ -194,3 +194,46 @@ models:
         description: Absolute forecast error for daily mean temperature (°C).
       - name: precipitation_abs_error
         description: Absolute forecast error for daily precipitation (mm).
+
+  - name: mart_latest_conditions
+    description: >
+      View. One row per tracked city. Combines the most-recent observed day
+      from fct_city_weather_day with today/tomorrow forecasts from
+      fct_forecast_accuracy, plus a 7-day composite visit score and its
+      three components (temp comfort, rain, wind). Powers the Overview KPI
+      cards, top-pick hero, and Recommendations leaderboard. Grain: location_id.
+    columns:
+      - name: location_id
+        description: Foreign key to dim_location.
+      - name: visit_score
+        description: >
+          7-day composite visit score 0-100 (weights: 40% temp comfort,
+          35% low rain, 25% low wind).
+      - name: condition_label
+        description: Human-readable label for the latest observed day condition.
+      - name: recommendation_reason
+        description: One-line plain-English reason for the visit score tier.
+
+  - name: mart_forecast_upcoming
+    description: >
+      View. One row per city per upcoming forecast date (date >= today).
+      Exposes forecasted measures from fct_forecast_accuracy together with
+      pre-computed score components (temp_comfort_score, rain_score,
+      wind_score) so the dashboard can reweight them client-side without
+      re-querying. Grain: location_id, date.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - location_id
+            - date
+    columns:
+      - name: temp_comfort_score
+        description: Temperature comfort 0-100; peaks at mean temp 22°C, falls to 0 at ±20°C.
+      - name: rain_score
+        description: Rain score 0-100; 100 = no precipitation, 0 = 20mm+.
+      - name: wind_score
+        description: Wind score 0-100; 100 = calm, 0 = 80 km/h+.
+      - name: visit_score
+        description: Composite score with default weights (40/35/25).
+      - name: condition_label
+        description: Forecasted condition label for this date.

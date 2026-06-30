@@ -1,3 +1,8 @@
 duckdb==1.5.3
 dbt-duckdb
 python-dotenv
+streamlit>=1.36
+plotly>=5.20
+pydeck>=0.9
+pandas>=2.0
+numpy>=1.26
