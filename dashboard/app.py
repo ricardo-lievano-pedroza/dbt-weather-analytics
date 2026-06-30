@@ -19,7 +19,7 @@ PAGES = [
 ]
 
 st.title("Weather Analytics")
-st.caption("Europe & South America cities · Data refreshes every 5 minutes.")
+st.caption("Europe")
 
 tabs = st.tabs([label for label, _ in PAGES])
 for tab, (_, module) in zip(tabs, PAGES):
