@@ -65,3 +65,6 @@ jobs:
 
       - name: Parse dbt project
         run: dbt parse --profiles-dir .
+
+      - name: Build dbt models
+        run: dbt build --profiles-dir .
