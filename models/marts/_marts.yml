@@ -1,0 +1,204 @@
+version: 2
+
+models:
+  - name: dim_location
+    description: >
+      One row per tracked city, sourced from stg_locations and deduplicated to
+      the most recent geocoding result. Acts as the location dimension for all
+      fact tables. Grain: location_id.
+    columns:
+      - name: location_id
+        description: Open-Meteo geocoding location identifier.
+        data_tests:
+          - unique
+          - not_null
+      - name: city_name
+        description: City name returned by the geocoding API.
+        data_tests:
+          - not_null
+      - name: country
+        description: Full country name.
+        data_tests:
+          - not_null
+      - name: country_code
+        description: ISO 3166-1 alpha-2 country code.
+        data_tests:
+          - not_null
+      - name: latitude
+        description: City latitude in decimal degrees.
+        data_tests:
+          - not_null
+      - name: longitude
+        description: City longitude in decimal degrees.
+        data_tests:
+          - not_null
+      - name: timezone
+        description: IANA timezone string for the city.
+        data_tests:
+          - not_null
+
+  - name: fct_city_weather_day
+    description: >
+      One row per city per day of observed weather, combining all daily weather
+      measures, analytical condition flags (rainy, hot, windy, freezing, snowy,
+      poor AQI, comfortable) and daily air quality metrics. Fact rows without
+      air quality data have null AQI columns. Grain: location_id, date.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - location_id
+            - date
+    columns:
+      - name: weather_daily_id
+        description: Surrogate key inherited from stg_weather_daily (location_id || date).
+        data_tests:
+          - unique
+          - not_null
+      - name: location_id
+        description: Foreign key to dim_location.
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('dim_location')
+              field: location_id
+      - name: date
+        description: Local observation date.
+        data_tests:
+          - not_null
+      - name: city_name
+        description: City name (denormalized from dim_location for convenience).
+        data_tests:
+          - not_null
+      - name: temperature_2m_max
+        description: Maximum 2 m temperature for the day (°C).
+        data_tests:
+          - not_null
+      - name: temperature_2m_min
+        description: Minimum 2 m temperature for the day (°C).
+        data_tests:
+          - not_null
+      - name: temperature_2m_mean
+        description: Mean 2 m temperature for the day (°C).
+        data_tests:
+          - not_null
+      - name: temperature_range
+        description: Daily temperature range, temperature_2m_max minus temperature_2m_min (°C).
+        data_tests:
+          - not_null
+      - name: precipitation_sum
+        description: Total precipitation for the day (mm).
+      - name: rain_sum
+        description: Total rainfall for the day (mm).
+      - name: snowfall_sum
+        description: Total snowfall for the day (cm).
+      - name: wind_speed_10m_max
+        description: Maximum 10 m wind speed for the day (km/h).
+      - name: is_rainy_day
+        description: True when precipitation_sum >= var('rainy_precip_mm').
+        data_tests:
+          - not_null
+      - name: is_hot_day
+        description: True when temperature_2m_max >= var('hot_temp_c').
+        data_tests:
+          - not_null
+      - name: is_windy_day
+        description: True when wind_speed_10m_max >= var('windy_kmh').
+        data_tests:
+          - not_null
+      - name: is_freezing_day
+        description: True when temperature_2m_min <= var('freezing_temp_c').
+        data_tests:
+          - not_null
+      - name: is_snowy_day
+        description: True when snowfall_sum > 0.
+        data_tests:
+          - not_null
+      - name: is_poor_aqi_day
+        description: True when max_european_aqi >= var('poor_aqi').
+        data_tests:
+          - not_null
+      - name: is_comfortable_day
+        description: >
+          True when mean temperature is within the comfortable range and the day
+          is not rainy, hot, windy, freezing, snowy, or poor AQI.
+        data_tests:
+          - not_null
+      - name: european_aqi_band
+        description: >
+          EEA AQI band (good / fair / moderate / poor / very poor / extremely poor)
+          based on the daily average. Null when no air quality data is available.
+      - name: is_complete_aqi_day
+        description: >
+          True when the number of hourly AQI observations meets the
+          complete_aqi_hours threshold (24).
+
+  - name: fct_forecast_accuracy
+    description: >
+      One row per city per forecast date, joining the latest forecast snapshot
+      to observed actuals. Signed and absolute errors are pre-computed for each
+      measure to support MAE and bias aggregations. Rows where has_actuals =
+      false represent future-dated forecasts not yet verified. Grain: location_id,
+      date (the date being forecasted).
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - location_id
+            - date
+    columns:
+      - name: forecast_accuracy_id
+        description: Surrogate key (location_id || forecast date).
+        data_tests:
+          - unique
+          - not_null
+      - name: location_id
+        description: Foreign key to dim_location.
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('dim_location')
+              field: location_id
+      - name: date
+        description: The date being forecasted.
+        data_tests:
+          - not_null
+      - name: city_name
+        description: City name (denormalized from dim_location for convenience).
+        data_tests:
+          - not_null
+      - name: forecast_snapshot_date
+        description: Calendar date on which the forecast was extracted.
+        data_tests:
+          - not_null
+      - name: forecast_horizon_days
+        description: Number of days between the snapshot date and the forecast date.
+        data_tests:
+          - not_null
+      - name: forecast_horizon_bucket
+        description: >
+          Bucketed horizon: short (0-3d), medium (4-7d), or long (8d+).
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['short (0-3d)', 'medium (4-7d)', 'long (8d+)']
+      - name: has_actuals
+        description: True when observed weather for this date is available.
+        data_tests:
+          - not_null
+      - name: temp_max_error
+        description: >
+          Signed forecast error for daily max temperature (forecast − actual, °C).
+          Positive values indicate the forecast was too high.
+      - name: temp_min_error
+        description: Signed forecast error for daily min temperature (forecast − actual, °C).
+      - name: temp_mean_error
+        description: Signed forecast error for daily mean temperature (forecast − actual, °C).
+      - name: precipitation_error
+        description: Signed forecast error for daily precipitation (forecast − actual, mm).
+      - name: temp_max_abs_error
+        description: Absolute forecast error for daily max temperature (°C).
+      - name: temp_min_abs_error
+        description: Absolute forecast error for daily min temperature (°C).
+      - name: temp_mean_abs_error
+        description: Absolute forecast error for daily mean temperature (°C).
+      - name: precipitation_abs_error
+        description: Absolute forecast error for daily precipitation (mm).
