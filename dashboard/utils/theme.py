@@ -56,6 +56,12 @@ ROLES = {
     "neutral": ("rgba(255,255,255,0.10)", "#c9c9cd", "#eceef0", "#505a63", "#8d969e"),
 }
 
+# up to 6 distinct, mode-aware series colors (charts with several cities)
+SERIES = {
+    "light": ["#494fdf", "#00a87e", "#ec7e00", "#e61e49", "#007bc2", "#a8571f"],
+    "dark":  ["#7f77dd", "#1dc39b", "#f2a13a", "#f2547d", "#3fa0e0", "#c98a52"],
+}
+
 _FONTS = (
     "@import url('https://fonts.googleapis.com/css2?"
     "family=Inter:wght@400;500&family=Space+Grotesk:wght@400;500&display=swap');"
@@ -126,6 +132,16 @@ h1,h2,h3,h4{color:var(--rv-text)!important;font-family:'Inter',system-ui,sans-se
 .rv-sc{display:flex;align-items:center;gap:8px;}
 .rv-scbar{width:56px;height:5px;border-radius:999px;background:var(--rv-track);overflow:hidden;}
 .rv-scbar>span{display:block;height:5px;border-radius:999px;}
+.rv-cellbar{height:5px;border-radius:999px;background:var(--rv-track);overflow:hidden;margin-top:5px;}
+.rv-cellbar>span{display:block;height:5px;border-radius:999px;background:var(--rv-primary);}
+
+.rv-lrow{display:flex;align-items:center;gap:14px;padding:12px 4px;border-bottom:1px solid var(--rv-divider);animation:rvIn .4s ease-out;}
+.rv-lrow:last-child{border-bottom:none;}
+.rv-rank{width:30px;font-family:'Space Grotesk','Inter',sans-serif;color:var(--rv-faint);font-size:14px;}
+.rv-lcity{font-weight:500;color:var(--rv-text);width:120px;}
+.rv-lbar{flex:1;height:6px;border-radius:999px;background:var(--rv-track);overflow:hidden;}
+.rv-lbar>span{display:block;height:6px;border-radius:999px;animation:rvGrow .7s ease-out;}
+.rv-lscore{font-family:'Space Grotesk','Inter',sans-serif;color:var(--rv-text);width:64px;text-align:right;font-size:15px;}
 
 @keyframes rvIn{from{opacity:0;transform:translateY(6px);}}
 @keyframes rvGrow{from{width:0;}}
