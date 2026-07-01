@@ -6,6 +6,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from utils.db import forecast_upcoming
 from utils import theme as rv
 
+MAX_CITIES = 4
+
 # short label -> (column, y-axis title, is a temperature series)
 VARIABLES = {
     "Max temp":  ("fcst_temperature_2m_max",  "Max temperature (°C)",  True),
@@ -16,6 +18,12 @@ VARIABLES = {
     "Score":     ("visit_score",              "Visit score",           False),
 }
 
+# up to MAX_CITIES distinct, mode-aware series colors
+PALETTE = {
+    "light": ["#494fdf", "#00a87e", "#ec7e00", "#e61e49"],
+    "dark":  ["#7f77dd", "#1dc39b", "#f2a13a", "#f2547d"],
+}
+
 
 def _segmented(label, options, key):
     if hasattr(st, "segmented_control"):
@@ -23,41 +31,38 @@ def _segmented(label, options, key):
     return st.radio(label, options, horizontal=True, key=key)
 
 
+def _rgba(hexc, a):
+    hexc = hexc.lstrip("#")
+    r, g, b = int(hexc[0:2], 16), int(hexc[2:4], 16), int(hexc[4:6], 16)
+    return f"rgba({r},{g},{b},{a})"
+
+
 def _f(v, dec=1):
     return "—" if v is None or (isinstance(v, float) and pd.isna(v)) else f"{v:.{dec}f}"
 
 
-def _focus_chart(df, y_col, axis_title, cities, focus, is_temp, theme):
+def _multi_chart(df, y_col, axis_title, cities, is_temp, theme):
     t = rv.THEMES[theme]
-    ctx = "#c9c9cd" if theme == "light" else "rgba(255,255,255,0.20)"
-    focus_color = t["spark"]
-    band = "rgba(73,79,223,0.10)" if theme == "light" else "rgba(127,119,221,0.16)"
-
+    palette = PALETTE[theme]
     fig = go.Figure()
-    for city in cities:
-        if city == focus:
-            continue
-        cdf = df[df["city_name"] == city].sort_values("date")
-        fig.add_trace(go.Scatter(
-            x=cdf["date"], y=cdf[y_col], mode="lines",
-            line=dict(color=ctx, width=1.5), name=city,
-            hovertemplate=f"{city}: %{{y:.1f}}<extra></extra>", showlegend=False,
-        ))
 
-    fcdf = df[df["city_name"] == focus].sort_values("date")
-    have_band = is_temp and {"fcst_temperature_2m_max", "fcst_temperature_2m_min"} <= set(df.columns)
-    if have_band and not fcdf.empty:
+    # High–low band only when a single city is selected (keeps multi-line clean).
+    if is_temp and len(cities) == 1 and {"fcst_temperature_2m_max", "fcst_temperature_2m_min"} <= set(df.columns):
+        cdf = df[df["city_name"] == cities[0]].sort_values("date")
         fig.add_trace(go.Scatter(
-            x=pd.concat([fcdf["date"], fcdf["date"][::-1]]),
-            y=pd.concat([fcdf["fcst_temperature_2m_max"], fcdf["fcst_temperature_2m_min"][::-1]]),
-            fill="toself", fillcolor=band, line=dict(color="rgba(0,0,0,0)"),
+            x=pd.concat([cdf["date"], cdf["date"][::-1]]),
+            y=pd.concat([cdf["fcst_temperature_2m_max"], cdf["fcst_temperature_2m_min"][::-1]]),
+            fill="toself", fillcolor=_rgba(palette[0], 0.10), line=dict(color="rgba(0,0,0,0)"),
             hoverinfo="skip", showlegend=False,
         ))
-    if not fcdf.empty:
+
+    for i, city in enumerate(cities):
+        color = palette[i % len(palette)]
+        cdf = df[df["city_name"] == city].sort_values("date")
         fig.add_trace(go.Scatter(
-            x=fcdf["date"], y=fcdf[y_col], mode="lines+markers",
-            line=dict(color=focus_color, width=3), marker=dict(size=6, color=focus_color),
-            name=focus, hovertemplate=f"{focus}: %{{y:.1f}}<extra></extra>", showlegend=False,
+            x=cdf["date"], y=cdf[y_col], mode="lines+markers", name=city,
+            line=dict(color=color, width=2.5), marker=dict(size=6, color=color),
+            hovertemplate="%{y:.1f}<extra>" + city + "</extra>",
         ))
 
     today = pd.Timestamp.today().normalize()
@@ -68,7 +73,11 @@ def _focus_chart(df, y_col, axis_title, cities, focus, is_temp, theme):
     fig.update_layout(
         height=440, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
         font=dict(family="Inter, system-ui, sans-serif", color=t["faint"], size=12),
-        margin=dict(l=55, r=20, t=30, b=40), hovermode="closest", showlegend=False,
+        margin=dict(l=55, r=20, t=50, b=40), hovermode="x unified",
+        hoverlabel=dict(bgcolor=t["surface"], bordercolor=t["hairline"],
+                        font=dict(color=t["text"], family="Inter, system-ui, sans-serif")),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0,
+                    font=dict(color=t["text"], size=12), bgcolor="rgba(0,0,0,0)"),
         xaxis=dict(showgrid=False, zeroline=False, linecolor=t["divider"]),
         yaxis=dict(title=axis_title, showgrid=True, gridcolor=t["divider"], zeroline=False),
     )
@@ -77,28 +86,27 @@ def _focus_chart(df, y_col, axis_title, cities, focus, is_temp, theme):
 
 def _small_multiples(df, y_col, cities, theme):
     t = rv.THEMES[theme]
-    per_row = 4
-    for start in range(0, len(cities), per_row):
-        chunk = cities[start:start + per_row]
-        cols = st.columns(len(chunk))
-        for col, city in zip(cols, chunk):
-            cdf = df[df["city_name"] == city].sort_values("date")
-            fig = go.Figure(go.Scatter(
-                x=cdf["date"], y=cdf[y_col], mode="lines",
-                line=dict(color=t["spark"], width=2),
-                hovertemplate="%{y:.1f}<extra></extra>",
-            ))
-            fig.update_layout(
-                height=170, margin=dict(l=8, r=8, t=28, b=8),
-                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                font=dict(family="Inter, system-ui, sans-serif", color=t["faint"], size=10),
-                title=dict(text=city, font=dict(size=12, color=t["text"])),
-                xaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
-                yaxis=dict(showgrid=True, gridcolor=t["divider"], zeroline=False),
-                showlegend=False,
-            )
-            with col:
-                st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    palette = PALETTE[theme]
+    cols = st.columns(len(cities))
+    for i, (col, city) in enumerate(zip(cols, cities)):
+        cdf = df[df["city_name"] == city].sort_values("date")
+        fig = go.Figure(go.Scatter(
+            x=cdf["date"], y=cdf[y_col], mode="lines+markers",
+            line=dict(color=palette[i % len(palette)], width=2.5),
+            marker=dict(size=5, color=palette[i % len(palette)]),
+            hovertemplate="%{y:.1f}<extra></extra>",
+        ))
+        fig.update_layout(
+            height=190, margin=dict(l=8, r=8, t=30, b=8),
+            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+            font=dict(family="Inter, system-ui, sans-serif", color=t["faint"], size=10),
+            title=dict(text=city, font=dict(size=13, color=t["text"])),
+            xaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
+            yaxis=dict(showgrid=True, gridcolor=t["divider"], zeroline=False),
+            showlegend=False,
+        )
+        with col:
+            st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
 
 def _table_html(df, cities):
@@ -122,6 +130,14 @@ def _table_html(df, cities):
     return f"<table class='rv-tbl'>{head}{''.join(body)}</table>"
 
 
+def _default_cities(fcst, all_cities):
+    """Top cities by mean visit score, capped at MAX_CITIES."""
+    if "visit_score" in fcst.columns:
+        ranked = fcst.groupby("city_name")["visit_score"].mean().sort_values(ascending=False)
+        return ranked.head(MAX_CITIES).index.tolist()
+    return all_cities[:MAX_CITIES]
+
+
 def show():
     theme = st.session_state.get("theme", "light")
 
@@ -137,15 +153,15 @@ def show():
     all_cities = sorted(fcst["city_name"].unique().tolist())
 
     with st.container(border=True):
-        c1, c2, c3, c4 = st.columns([3, 3, 2, 1.4])
+        c1, c2, c3 = st.columns([4, 3.5, 1.4])
         with c1:
-            selected = st.multiselect("Cities", all_cities, default=all_cities, key="fc_cities")
+            selected = st.multiselect(
+                "Cities (up to 4)", all_cities, default=_default_cities(fcst, all_cities),
+                max_selections=MAX_CITIES, key="fc_cities",
+            )
         with c2:
             var_label = _segmented("Variable", list(VARIABLES.keys()), "fc_var")
         with c3:
-            focus_opts = selected or all_cities
-            focus = st.selectbox("Focus city", focus_opts, key="fc_focus")
-        with c4:
             small = st.toggle("Small multiples", key="fc_small")
 
     if not selected:
@@ -164,15 +180,15 @@ def show():
             )
             _small_multiples(df, y_col, selected, theme)
         else:
+            band_note = (" Shaded band shows the daily high–low range when a single city is selected."
+                         if is_temp else "")
             st.markdown(
                 f'<div class="rv-cardtitle">{axis_title} · next 7 days</div>'
-                f'<div class="rv-cardsub">{focus} in focus'
-                + (" (with its high–low band)" if is_temp else "")
-                + " — other cities shown as light context lines.</div>",
+                f'<div class="rv-cardsub">Each city has its own color (see legend).{band_note}</div>',
                 unsafe_allow_html=True,
             )
             st.plotly_chart(
-                _focus_chart(df, y_col, axis_title, selected, focus, is_temp, theme),
+                _multi_chart(df, y_col, axis_title, selected, is_temp, theme),
                 use_container_width=True, config={"displayModeBar": False},
             )
 
