@@ -24,14 +24,16 @@ PAGES = [
     ("City detail", city_detail),
 ]
 
-brand_col, toggle_col, fs_col = st.columns([7, 1.3, 0.5])
+brand_col, ctrl_col = st.columns([9, 1.1])
 brand_col.markdown(
     '<span class="rv-brand">Weather analytics</span>'
     '<span class="rv-tagline">Find the ideal place for your ideal holiday</span>',
     unsafe_allow_html=True,
 )
-rv.render_toggle(toggle_col)
-rv.render_fullscreen(fs_col)
+with ctrl_col:
+    toggle_col, fs_col = st.columns(2, gap="small")
+    rv.render_toggle(toggle_col)
+    rv.render_fullscreen(fs_col)
 
 tabs = st.tabs([label for label, _ in PAGES])
 for tab, (_, module) in zip(tabs, PAGES):
