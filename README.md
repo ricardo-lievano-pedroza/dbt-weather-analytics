@@ -8,6 +8,8 @@ that recommends the best European city for a holiday.
 
 **🌤 Live dashboard:** https://dbt-weather-analytics-y8gbhkpnqc27szlu9znbza.streamlit.app/
 
+**Group members:** Andrea Alarcón Valles, Tina Jannasch, Ricardo Liévano Pedroza, Luka Tcheishvili
+
 ## Architecture
 
 ```text
