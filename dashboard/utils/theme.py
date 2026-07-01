@@ -66,7 +66,7 @@ _FONTS = (
 _BASE_CSS = """
 .stApp{background:var(--rv-canvas);}
 header[data-testid="stHeader"]{background:transparent;}
-.block-container{padding-top:2.2rem;max-width:1180px;}
+.block-container{padding:2rem 2.5rem 3rem;max-width:100%;}
 .stApp, .stMarkdown, [data-testid="stMarkdownContainer"], p, span, label{
   color:var(--rv-text);font-family:'Inter',system-ui,-apple-system,sans-serif;}
 h1,h2,h3,h4{color:var(--rv-text)!important;font-family:'Inter',system-ui,sans-serif;}
@@ -75,6 +75,9 @@ h1,h2,h3,h4{color:var(--rv-text)!important;font-family:'Inter',system-ui,sans-se
   transition:border-color .2s ease-out,transform .1s ease-out;}
 .stButton>button:hover{border-color:var(--rv-primary);color:var(--rv-text);}
 .stButton>button:active{transform:scale(.97);}
+[data-testid="stVerticalBlockBorderWrapper"]{border-radius:20px;}
+div[data-testid="stVerticalBlockBorderWrapper"]:has(>div>div>[data-testid="stHorizontalBlock"]){
+  border:1px solid var(--rv-hairline);background:var(--rv-surface);}
 
 .rv-brand{font-family:'Space Grotesk','Inter',sans-serif;font-size:20px;font-weight:500;
   letter-spacing:-.3px;color:var(--rv-text);}
@@ -90,8 +93,9 @@ h1,h2,h3,h4{color:var(--rv-text)!important;font-family:'Inter',system-ui,sans-se
 .rv-hero-score{font-family:'Space Grotesk','Inter',sans-serif;font-size:46px;font-weight:500;
   letter-spacing:-1.5px;line-height:1;color:#fff;}
 
-.rv-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;}
+.rv-grid{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;}
 .rv-card{background:var(--rv-surface);border:1px solid var(--rv-hairline);border-radius:20px;
+  flex:1 1 260px;max-width:340px;
   padding:16px 18px;transition:transform .2s ease-out,border-color .2s ease-out;animation:rvIn .5s ease-out;}
 .rv-card:hover{transform:translateY(-3px);border-color:var(--rv-primary);}
 .rv-card-head{display:flex;justify-content:space-between;align-items:center;gap:8px;}
@@ -113,7 +117,7 @@ h1,h2,h3,h4{color:var(--rv-text)!important;font-family:'Inter',system-ui,sans-se
 
 def init_theme():
     """Ensure a theme is selected. Call once, early, on every run."""
-    st.session_state.setdefault("theme", "dark")
+    st.session_state.setdefault("theme", "light")
 
 
 def _toggle_theme():
@@ -125,6 +129,34 @@ def render_toggle(container):
     label = "Light mode" if st.session_state.get("theme") == "dark" else "Dark mode"
     container.button(label, key="theme_toggle", on_click=_toggle_theme,
                      use_container_width=True)
+
+
+def render_fullscreen(container):
+    """Render a button that toggles browser fullscreen for the whole app.
+
+    Fullscreen needs a client-side gesture, so this runs as a small same-origin
+    component that calls requestFullscreen on the parent Streamlit document.
+    """
+    import streamlit.components.v1 as components
+
+    t = THEMES[st.session_state.get("theme", "light")]
+    html = f"""<style>
+    body{{margin:0}}
+    #fsb{{width:100%;height:36px;border-radius:999px;border:1px solid {t['hairline']};
+      background:{t['surface']};color:{t['text']};font:500 14px/1 'Inter',system-ui,sans-serif;
+      cursor:pointer;transition:border-color .2s ease-out;}}
+    #fsb:hover{{border-color:{PRIMARY}}}
+    </style>
+    <button id="fsb" onclick="rvFs()">Fullscreen</button>
+    <script>
+    function rvFs(){{var d=window.parent.document;
+      if(!d.fullscreenElement){{d.documentElement.requestFullscreen();}}else{{d.exitFullscreen();}}}}
+    try{{window.parent.document.addEventListener('fullscreenchange',function(){{
+      document.getElementById('fsb').textContent =
+        window.parent.document.fullscreenElement ? 'Exit fullscreen' : 'Fullscreen';}});}}catch(e){{}}
+    </script>"""
+    with container:
+        components.html(html, height=44)
 
 
 def inject_css():

@@ -15,7 +15,10 @@ def show():
         return
 
     top = lc.sort_values("visit_score", ascending=False).iloc[0]
-    cards = "".join(rv.kpi_card(row, fcst) for _, row in lc.iterrows())
+    # Exclude the current top pick from the grid; it already headlines the hero.
+    # Keyed off visit_score, so the excluded city updates automatically on reload.
+    rest = lc.drop(index=top.name)
+    cards = "".join(rv.kpi_card(row, fcst) for _, row in rest.iterrows())
 
     st.markdown(
         rv.hero(top)

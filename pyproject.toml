@@ -18,6 +18,8 @@ dependencies = [
     "python-dotenv>=1.2.2",
     "streamlit",
     "plotly",
+    "folium>=0.16",
+    "streamlit-folium>=0.21",
 ]
 
 [tool.uv]
