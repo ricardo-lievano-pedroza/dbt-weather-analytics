@@ -24,7 +24,7 @@ PAGES = [
     ("City detail", city_detail),
 ]
 
-brand_col, toggle_col, fs_col = st.columns([6, 1, 1])
+brand_col, toggle_col, fs_col = st.columns([7, 1.3, 0.5])
 brand_col.markdown(
     '<span class="rv-brand">Weather analytics</span>'
     '<span class="rv-tagline">Find the ideal place for your ideal holiday</span>',
