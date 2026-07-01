@@ -1,2 +1,1 @@
-select * from {{ ref('fct_forecast_accuracy') }} 
-where city_name = 'Brussels' 
+select distinct "date" from {{ ref('mart_forecast_upcoming') }} 

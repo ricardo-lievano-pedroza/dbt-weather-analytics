@@ -114,7 +114,7 @@ def show():
 
     st.subheader("Values on selected date")
     display_cols = ["city_name", "country", col_field, "condition_label",
-                    "visit_score", "latitude", "longitude"]
+                    "latitude", "longitude"]
     display_cols = [c for c in display_cols if c in day_data.columns]
     st.dataframe(
         day_data[display_cols].rename(columns={col_field: var_label})
