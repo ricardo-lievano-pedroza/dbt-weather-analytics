@@ -92,23 +92,28 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(>div>div>[data-testid="stHor
 .rv-hero-sub{font-size:13px;color:rgba(255,255,255,.78);margin-top:4px;max-width:520px;}
 .rv-hero-score{font-family:'Space Grotesk','Inter',sans-serif;font-size:46px;font-weight:500;
   letter-spacing:-1.5px;line-height:1;color:#fff;}
+.rv-hero-max{font-size:20px;font-weight:500;color:rgba(255,255,255,.6);letter-spacing:-.5px;margin-left:1px;}
 
-.rv-grid{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;}
-.rv-card{background:var(--rv-surface);border:1px solid var(--rv-hairline);border-radius:20px;
-  flex:1 1 260px;max-width:340px;
-  padding:16px 18px;transition:transform .2s ease-out,border-color .2s ease-out;animation:rvIn .5s ease-out;}
+.rv-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;grid-auto-rows:1fr;}
+@media (max-width:1300px){.rv-grid{grid-template-columns:repeat(3,minmax(0,1fr));}}
+@media (max-width:850px){.rv-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media (max-width:520px){.rv-grid{grid-template-columns:1fr;}}
+.rv-card{display:flex;flex-direction:column;background:var(--rv-surface);border:1px solid var(--rv-hairline);
+  border-radius:20px;padding:18px 20px;transition:transform .2s ease-out,border-color .2s ease-out;animation:rvIn .5s ease-out;}
 .rv-card:hover{transform:translateY(-3px);border-color:var(--rv-primary);}
 .rv-card-head{display:flex;justify-content:space-between;align-items:center;gap:8px;}
-.rv-city{font-size:14px;font-weight:500;color:var(--rv-text);}
+.rv-city{font-size:15px;font-weight:500;color:var(--rv-text);}
 .rv-pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:3px 9px;
   border-radius:999px;white-space:nowrap;}
-.rv-temp{font-family:'Space Grotesk','Inter',sans-serif;font-size:34px;font-weight:500;
-  letter-spacing:-1px;color:var(--rv-text);margin:8px 0 2px;}
-.rv-stats{font-size:12px;color:var(--rv-faint);display:flex;gap:12px;margin:6px 0 12px;}
+.rv-temp{font-family:'Space Grotesk','Inter',sans-serif;font-size:40px;font-weight:500;
+  letter-spacing:-1.4px;color:var(--rv-text);margin:10px 0 2px;}
+.rv-stats{font-size:12px;color:var(--rv-faint);display:flex;gap:14px;margin:6px 0 14px;}
 .rv-stats i{margin-right:3px;}
+.rv-foot{margin-top:auto;}
 .rv-bar{height:6px;border-radius:999px;background:var(--rv-track);overflow:hidden;}
 .rv-bar>span{display:block;height:6px;border-radius:999px;animation:rvGrow .7s ease-out;}
-.rv-score-label{font-size:11px;color:var(--rv-faint);margin-top:6px;}
+.rv-score-label{font-size:11px;color:var(--rv-faint);margin-top:8px;}
+.rv-spark{width:100%;height:46px;margin-top:12px;display:block;}
 
 @keyframes rvIn{from{opacity:0;transform:translateY(6px);}}
 @keyframes rvGrow{from{width:0;}}
@@ -141,19 +146,21 @@ def render_fullscreen(container):
 
     t = THEMES[st.session_state.get("theme", "light")]
     html = f"""<style>
-    body{{margin:0}}
-    #fsb{{width:100%;height:36px;border-radius:999px;border:1px solid {t['hairline']};
-      background:{t['surface']};color:{t['text']};font:500 14px/1 'Inter',system-ui,sans-serif;
-      cursor:pointer;transition:border-color .2s ease-out;}}
+    body{{margin:0;display:flex;justify-content:center;align-items:center;height:44px}}
+    #fsb{{width:40px;height:40px;border-radius:50%;border:1px solid {t['hairline']};
+      background:{t['surface']};color:{t['text']};cursor:pointer;display:flex;
+      align-items:center;justify-content:center;transition:border-color .2s ease-out,transform .1s ease-out;}}
     #fsb:hover{{border-color:{PRIMARY}}}
+    #fsb:active{{transform:scale(.94)}}
+    #fsb svg{{width:18px;height:18px}}
     </style>
-    <button id="fsb" onclick="rvFs()">Fullscreen</button>
+    <button id="fsb" title="Toggle fullscreen" aria-label="Toggle fullscreen" onclick="rvFs()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4"/></svg>
+    </button>
     <script>
     function rvFs(){{var d=window.parent.document;
       if(!d.fullscreenElement){{d.documentElement.requestFullscreen();}}else{{d.exitFullscreen();}}}}
-    try{{window.parent.document.addEventListener('fullscreenchange',function(){{
-      document.getElementById('fsb').textContent =
-        window.parent.document.fullscreenElement ? 'Exit fullscreen' : 'Fullscreen';}});}}catch(e){{}}
     </script>"""
     with container:
         components.html(html, height=44)
@@ -204,12 +211,13 @@ def _pill_colors(role):
 
 
 def _sparkline(city, fcst_df, color):
+    placeholder = '<div class="rv-spark"></div>'  # keeps every card the same height
     if fcst_df is None or fcst_df.empty:
-        return ""
+        return placeholder
     d = fcst_df[fcst_df["city_name"] == city].sort_values("date")
     ys = [v for v in d.get("fcst_temperature_2m_max", []) if _is_num(v)]
     if len(ys) < 2:
-        return ""
+        return placeholder
     lo, hi = min(ys), max(ys)
     rng = (hi - lo) or 1.0
     n = len(ys)
@@ -217,8 +225,7 @@ def _sparkline(city, fcst_df, color):
         f"{i / (n - 1) * 100:.1f},{28 - (y - lo) / rng * 24:.1f}" for i, y in enumerate(ys)
     )
     return (
-        '<svg viewBox="0 0 100 32" preserveAspectRatio="none" '
-        'style="width:100%;height:34px;margin-top:12px;display:block">'
+        '<svg class="rv-spark" viewBox="0 0 100 32" preserveAspectRatio="none">'
         f'<polyline points="{pts}" fill="none" stroke="{color}" stroke-width="2" '
         'stroke-linejoin="round" stroke-linecap="round"/></svg>'
     )
@@ -229,13 +236,17 @@ def hero(row):
     city = row.get("city_name", "")
     score = row.get("visit_score")
     reason = row.get("recommendation_reason") or ""
+    score_inner = (
+        f'{_num(score)}<span class="rv-hero-max">/100</span>'
+        if _is_num(score) else _num(score)
+    )
     return (
         '<div class="rv-hero"><div>'
         '<div class="rv-eyebrow">Top pick right now</div>'
         f'<div class="rv-hero-city">{city}</div>'
         f'<div class="rv-hero-sub">{reason}</div></div>'
         '<div style="text-align:right">'
-        f'<div class="rv-hero-score">{_num(score)}</div>'
+        f'<div class="rv-hero-score">{score_inner}</div>'
         '<div class="rv-eyebrow">visit score</div></div></div>'
     )
 
@@ -255,6 +266,7 @@ def kpi_card(row, fcst_df):
     bar = ROLES[score_role(score)][4]
     width = max(0, min(100, score)) if _is_num(score) else 0
     spark = _sparkline(city, fcst_df, theme["spark"])
+    score_txt = f"{_num(score)}/100" if _is_num(score) else _num(score)
     return (
         '<div class="rv-card"><div class="rv-card-head">'
         f'<span class="rv-city">{city}</span>'
@@ -265,7 +277,8 @@ def kpi_card(row, fcst_df):
         f'<span><i class="ti ti-arrow-down"></i>{_num(tmin)}°</span>'
         f'<span><i class="ti ti-droplet"></i>{_num(precip, 1)} mm</span>'
         f'<span><i class="ti ti-wind"></i>{_num(wind)} km/h</span></div>'
+        '<div class="rv-foot">'
         f'<div class="rv-bar"><span style="width:{width:.0f}%;background:{bar}"></span></div>'
-        f'<div class="rv-score-label">Visit score {_num(score)}</div>'
-        f'{spark}</div>'
+        f'<div class="rv-score-label">Visit score {score_txt}</div>'
+        f'{spark}</div></div>'
     )

@@ -139,7 +139,7 @@ def show():
         f"<span>{vmin}</span><span>{vmax}</span></div></div>"
     ))
 
-    st_folium(fmap, use_container_width=True, height=520, returned_objects=[])
+    st_folium(fmap, use_container_width=True, height=700, returned_objects=[])
     st.caption(
         f"Showing {var_label} for {sel_date:%b %d}. Point size and color scale with the "
         "value — hover for a quick read, click a city for details."
