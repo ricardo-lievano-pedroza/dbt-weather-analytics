@@ -162,8 +162,8 @@ def show():
         return
 
     cities = sorted(lc["city_name"].unique().tolist())
-    with st.container(border=True):
-        city = st.selectbox("City", cities, key="cd_city")
+    sel_col, _ = st.columns([3, 9])
+    city = sel_col.selectbox("City", cities, key="cd_city")
 
     row = lc[lc["city_name"] == city].iloc[0]
     fcst_c = fcst[fcst["city_name"] == city].copy().sort_values("date").head(7)
