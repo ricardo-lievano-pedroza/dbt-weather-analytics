@@ -87,7 +87,8 @@ every token below; add new tokens there, never hardcode colors elsewhere.
 
 - All styling is authored in **`theme.py`** and injected once (globally in `app.py`) via `st.markdown`. Do not scatter CSS across pages or duplicate tokens.
 - Reusable component builders return HTML strings (e.g. `hero()`, `kpi_card()`); pages compose them.
-- Header carries the brand + tagline, the light/dark toggle, and a **Fullscreen** button.
+- Header carries the brand + tagline, the light/dark toggle, and a **Fullscreen** button. The toggle and Fullscreen buttons live in a `hdr_ctrls` container that keeps them tight together.
+- **Browser tab title** is pinned to `Weather Analytics`. The Streamlit host appends ` · Streamlit` on top of `page_title`, so a small script inside the Fullscreen component (`render_fullscreen` in `theme.py`) re-applies the intended title and keeps it if the suffix returns. Don't remove it when editing that component.
 - **Top pick is shown once**: it headlines the hero and is excluded from the "current conditions" card grid. Exclusion is keyed off the highest `visit_score`, so it updates automatically when data reloads.
 - Always round displayed numbers; render missing/NaN as `—` and a zero-width score bar.
 
@@ -120,6 +121,8 @@ every token below; add new tokens there, never hardcode colors elsewhere.
 
 Newest first. Describe **what** changed and **why**; do not include who did it.
 
+- 2026-07-01 — Header/global polish + browser tab title: the light/dark toggle and Fullscreen buttons are wrapped in a `hdr_ctrls` container with a tightened column gap (`.st-key-hdr_ctrls` CSS) so they sit closer together. The browser tab title is now pinned to `Weather Analytics` — the Streamlit host appends ` · Streamlit` on top of `page_title`, so a small script in the Fullscreen component re-applies the intended title and keeps it via a `MutationObserver` if the suffix is re-added.
+- 2026-07-01 — Documentation: added `dbt-weather-analytics-code-documentation.pdf`, a comprehensive non-technical walkthrough of the whole codebase (pipeline, every dbt staging/intermediate/marts model with its code explained, the visit-score logic, model lineage, tests, the dashboard and a glossary).
 - 2026-07-01 — City detail page redesigned to the theme: cobalt hero header (city, visit score N/100) plus a row of themed stat tiles (condition pill, high/low, mean, precip, wind, air-quality band pill); a responsive row of themed 7-day forecast cards (date, condition pill, temp, precip, score bar); a single Trends chart with a variable switcher (Temperature / Precipitation / Wind / Visit score) overlaying observed history (teal) and forecast (cobalt dashed) split at a Today marker; and a themed location tile row. All emojis removed.
 - 2026-07-01 — Comparison chart toggle added: a Line / Radar switch. Line (default) is a full-width multi-line chart (6-color `theme.SERIES` palette, legend, unified hover, band for a single city) with the metric table stacked full-width below (fills the vertical space); Radar keeps the Scatterpolar beside the metric table (fills the width).
 - 2026-07-01 — Header/global polish: the dark-mode toggle is now a compact moon/sun icon button (Material icon, circular, scoped via `.st-key-theme_toggle`) sitting next to the Fullscreen icon; multiselect chips now render white text and a white close icon on the cobalt background for contrast.

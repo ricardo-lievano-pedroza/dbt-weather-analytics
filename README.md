@@ -10,6 +10,19 @@ that recommends the best European city for a holiday.
 
 **Group members:** Andrea Alarcón Valles, Tina Jannasch, Ricardo Liévano Pedroza, Luka Tcheishvili
 
+## Documentation
+
+A full, non-technical walkthrough of the entire codebase is available as a PDF:
+
+```text
+dbt-weather-analytics-code-documentation.pdf
+```
+
+It explains the data pipeline, every dbt model (staging, intermediate and marts)
+with its code, the visit-score logic, model lineage, the data-quality tests, the
+Streamlit dashboard, and includes a plain-English glossary — written so a
+non-technical reader can follow the whole project.
+
 ## Architecture
 
 ```text
