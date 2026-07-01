@@ -1,6 +1,4 @@
 import streamlit as st
-import folium
-from streamlit_folium import st_folium
 import pandas as pd
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
@@ -46,6 +44,11 @@ def _segmented(label, options, key):
 
 
 def show():
+    # Imported lazily so a missing map dependency degrades only this page
+    # instead of crashing the whole app at import time.
+    import folium
+    from streamlit_folium import st_folium
+
     theme = st.session_state.get("theme", "light")
 
     with st.spinner("Loading forecast data…"):
