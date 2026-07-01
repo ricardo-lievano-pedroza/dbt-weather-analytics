@@ -84,6 +84,8 @@ h1,h2,h3,h4{color:var(--rv-text)!important;font-family:'Inter',system-ui,sans-se
 .st-key-theme_toggle{display:flex;justify-content:flex-end;}
 .st-key-theme_toggle button{width:40px;min-width:40px;height:40px;padding:0;border-radius:50%;
   display:inline-flex;align-items:center;justify-content:center;font-size:20px;line-height:1;}
+.st-key-hdr_ctrls [data-testid="stHorizontalBlock"]{gap:4px;}
+.st-key-hdr_ctrls [data-testid="stColumn"]{width:auto!important;flex:0 0 auto!important;min-width:0!important;}
 [data-testid="stVerticalBlockBorderWrapper"]{border-radius:20px;
   border:1px solid var(--rv-hairline);background:var(--rv-surface);}
 span[data-baseweb="tag"]{background-color:var(--rv-primary)!important;}
@@ -195,6 +197,15 @@ def render_fullscreen(container):
     <script>
     function rvFs(){{var d=window.parent.document;
       if(!d.fullscreenElement){{d.documentElement.requestFullscreen();}}else{{d.exitFullscreen();}}}}
+    // Force the browser tab title to just the app name. The host appends
+    // " · Streamlit" on top of page_title; keep re-applying it if that happens.
+    (function(){{
+      var d=window.parent.document, want="Weather Analytics";
+      var fix=function(){{ if(d.title!==want){{ d.title=want; }} }};
+      fix();
+      var el=d.querySelector("title");
+      if(el){{ new MutationObserver(fix).observe(el, {{childList:true}}); }}
+    }})();
     </script>"""
     with container:
         components.html(html, height=44)
