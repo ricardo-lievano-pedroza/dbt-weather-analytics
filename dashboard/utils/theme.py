@@ -75,6 +75,9 @@ h1,h2,h3,h4{color:var(--rv-text)!important;font-family:'Inter',system-ui,sans-se
   transition:border-color .2s ease-out,transform .1s ease-out;}
 .stButton>button:hover{border-color:var(--rv-primary);color:var(--rv-text);}
 .stButton>button:active{transform:scale(.97);}
+.st-key-theme_toggle{display:flex;justify-content:flex-end;}
+.st-key-theme_toggle button{width:40px;min-width:40px;height:40px;padding:0;border-radius:50%;
+  display:inline-flex;align-items:center;justify-content:center;font-size:20px;line-height:1;}
 [data-testid="stVerticalBlockBorderWrapper"]{border-radius:20px;
   border:1px solid var(--rv-hairline);background:var(--rv-surface);}
 
@@ -142,10 +145,11 @@ def _toggle_theme():
 
 
 def render_toggle(container):
-    """Render the light/dark switch. Label names the mode it switches TO."""
-    label = "Light mode" if st.session_state.get("theme") == "dark" else "Dark mode"
-    container.button(label, key="theme_toggle", on_click=_toggle_theme,
-                     use_container_width=True)
+    """Light/dark switch as a compact icon button (moon in light mode, sun in dark)."""
+    is_light = st.session_state.get("theme") == "light"
+    icon = ":material/dark_mode:" if is_light else ":material/light_mode:"
+    tip = "Switch to dark mode" if is_light else "Switch to light mode"
+    container.button(icon, key="theme_toggle", on_click=_toggle_theme, help=tip)
 
 
 def render_fullscreen(container):
@@ -158,7 +162,7 @@ def render_fullscreen(container):
 
     t = THEMES[st.session_state.get("theme", "light")]
     html = f"""<style>
-    body{{margin:0;display:flex;justify-content:center;align-items:center;height:44px}}
+    body{{margin:0;display:flex;justify-content:flex-start;align-items:center;height:44px}}
     #fsb{{width:40px;height:40px;border-radius:50%;border:1px solid {t['hairline']};
       background:{t['surface']};color:{t['text']};cursor:pointer;display:flex;
       align-items:center;justify-content:center;transition:border-color .2s ease-out,transform .1s ease-out;}}
