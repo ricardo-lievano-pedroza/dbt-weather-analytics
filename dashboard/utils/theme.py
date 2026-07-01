@@ -83,6 +83,8 @@ h1,h2,h3,h4{color:var(--rv-text)!important;font-family:'Inter',system-ui,sans-se
 .stButton>button:active{transform:scale(.97);}
 [data-testid="stVerticalBlockBorderWrapper"]{border-radius:20px;
   border:1px solid var(--rv-hairline);background:var(--rv-surface);}
+span[data-baseweb="tag"]{background-color:var(--rv-primary)!important;}
+span[data-baseweb="tag"] *{color:#fff!important;fill:#fff!important;}
 
 .rv-brand{font-family:'Space Grotesk','Inter',sans-serif;font-size:20px;font-weight:500;
   letter-spacing:-.3px;color:var(--rv-text);}
