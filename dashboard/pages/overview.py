@@ -78,7 +78,7 @@ def _kpi_card(city: str, row: pd.Series, forecast_df: pd.DataFrame):
         if obs_mean is not None:
             st.caption(f"Feels-like avg: {obs_mean:.1f}°C")
 
-        if score is not None:
+        if pd.notna(score):
             st.progress(int(score), text=f"Visit Score: {score:.0f}/100")
 
         city_fcst = forecast_df[forecast_df["city_name"] == city].sort_values("date")
