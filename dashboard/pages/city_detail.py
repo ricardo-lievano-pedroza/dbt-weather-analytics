@@ -174,12 +174,11 @@ def show():
 
     st.markdown(_hero_html(row, city) + _stat_row(row), unsafe_allow_html=True)
 
-    with st.container(border=True):
-        st.markdown('<div class="rv-cardtitle">7-day forecast</div>', unsafe_allow_html=True)
-        if fcst_c.empty:
-            st.info("No upcoming forecast data.")
-        else:
-            st.markdown(_forecast_cards_html(fcst_c), unsafe_allow_html=True)
+    st.markdown('<div class="rv-section">7-day forecast</div>', unsafe_allow_html=True)
+    if fcst_c.empty:
+        st.info("No upcoming forecast data.")
+    else:
+        st.markdown(_forecast_cards_html(fcst_c), unsafe_allow_html=True)
 
     with st.container(border=True):
         st.markdown('<div class="rv-cardtitle">Trends</div>'
@@ -193,6 +192,5 @@ def show():
             st.plotly_chart(_trend_chart(hist_c, fcst_c, obs_col, fcst_col, axis_title, theme),
                             use_container_width=True, config={"displayModeBar": False})
 
-    with st.container(border=True):
-        st.markdown('<div class="rv-cardtitle">Location</div>', unsafe_allow_html=True)
-        st.markdown(_location_row(row), unsafe_allow_html=True)
+    st.markdown('<div class="rv-section">Location</div>', unsafe_allow_html=True)
+    st.markdown(_location_row(row), unsafe_allow_html=True)
