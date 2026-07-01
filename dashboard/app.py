@@ -32,9 +32,10 @@ brand_col.markdown(
     unsafe_allow_html=True,
 )
 with ctrl_col:
-    toggle_col, fs_col = st.columns(2, gap="small")
-    rv.render_toggle(toggle_col)
-    rv.render_fullscreen(fs_col)
+    with st.container(key="hdr_ctrls"):
+        toggle_col, fs_col = st.columns(2, gap="small")
+        rv.render_toggle(toggle_col)
+        rv.render_fullscreen(fs_col)
 
 tabs = st.tabs([label for label, _ in PAGES])
 for tab, (_, module) in zip(tabs, PAGES):
