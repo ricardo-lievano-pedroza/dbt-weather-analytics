@@ -28,11 +28,13 @@ Pages and the mart each one reads:
 | Page | Reads | Status |
 |------|-------|--------|
 | Overview | `mart_latest_conditions`, `mart_forecast_upcoming` | Redesigned |
-| Map | `dim_location`, `mart_latest_conditions` | **Next** |
-| Forecast & trends | `mart_forecast_upcoming`, `fct_city_weather_day` | Old styling |
-| Comparison | `fct_city_weather_day`, `mart_latest_conditions` | Old styling |
-| Recommendations | `mart_latest_conditions` | Old styling |
-| City detail | `mart_latest_conditions`, `fct_city_weather_day` | Old styling |
+| Map | `dim_location`, `mart_forecast_upcoming` | Redesigned |
+| Forecast & trends | `mart_forecast_upcoming` | Redesigned |
+| Comparison | `mart_forecast_upcoming` | Redesigned |
+| Recommendations | `mart_forecast_upcoming` | Redesigned |
+| City detail | `mart_latest_conditions`, `mart_forecast_upcoming`, `fct_city_weather_day` | Redesigned |
+
+All six pages are now on the shared theme (no emojis, themed charts/tables/filters).
 
 ---
 
@@ -95,7 +97,7 @@ every token below; add new tokens there, never hardcode colors elsewhere.
 
 - **Shared theme, layout per page.** Every page uses the same tokens/fonts/motion from `theme.py`; only the layout and components differ.
 - Redesign **one page at a time**, and **get the user's sign-off on the visual before implementing** a new page.
-- Roadmap: Overview (done) → **Map (next)** → Recommendations → Forecast & trends → Comparison → City detail (order can change at the user's request).
+- Roadmap: all six pages (Overview, Map, Forecast & trends, Comparison, Recommendations, City detail) are now redesigned to the shared theme. Continue any future page work one page at a time, with the user's sign-off on the visual first.
 - When theming charts/maps (Plotly, pydeck): transparent backgrounds, cobalt accents, themed text — match the tokens, no emojis, no default library chrome that clashes.
 
 ---
@@ -118,6 +120,9 @@ every token below; add new tokens there, never hardcode colors elsewhere.
 
 Newest first. Describe **what** changed and **why**; do not include who did it.
 
+- 2026-07-01 — City detail page redesigned to the theme: cobalt hero header (city, visit score N/100) plus a row of themed stat tiles (condition pill, high/low, mean, precip, wind, air-quality band pill); a responsive row of themed 7-day forecast cards (date, condition pill, temp, precip, score bar); a single Trends chart with a variable switcher (Temperature / Precipitation / Wind / Visit score) overlaying observed history (teal) and forecast (cobalt dashed) split at a Today marker; and a themed location tile row. All emojis removed.
+- 2026-07-01 — Comparison chart toggle added: a Line / Radar switch. Line (default) is a full-width multi-line chart (6-color `theme.SERIES` palette, legend, unified hover, band for a single city) with the metric table stacked full-width below (fills the vertical space); Radar keeps the Scatterpolar beside the metric table (fills the width).
+- 2026-07-01 — Header/global polish: the dark-mode toggle is now a compact moon/sun icon button (Material icon, circular, scoped via `.st-key-theme_toggle`) sitting next to the Fullscreen icon; multiselect chips now render white text and a white close icon on the cobalt background for contrast.
 - 2026-07-01 — Recommendations page redesigned to the theme: removed all emojis (medals, activity presets, title); activity presets renamed to plain text (Beach day / Hiking / City walk / Skiing) that drive the temp/rain/wind weight sliders via session_state. The leaderboard is now a top-pick cobalt hero (like the Overview) plus clean ranked rows (rank, city, condition pill, N/100 bar). Score breakdown is a themed stacked bar (cobalt/teal/amber); best-day finder is a themed table with score bars and condition pills. Preferences and filters live in themed cards; cities capped at 6.
 - 2026-07-01 — Comparison page redesigned to the theme: dropped the red-yellow-green heatmap and emoji title. Themed radar (Scatterpolar, distinct per-city colors from the new `theme.SERIES` palette, 0–100 normalized axes) plus a custom metric-comparison table with in-cell magnitude bars (visit-score cell colored by score). Scope + city filters (capped at 6) in a themed filter bar. Added `theme.SERIES` (6 mode-aware series colors) and leaderboard/cell-bar CSS.
 
