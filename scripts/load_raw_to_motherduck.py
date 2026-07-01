@@ -126,7 +126,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--database",
         default=None,
-        help="MotherDuck database name. Defaults to MOTHERDUCK_DATABASE or open_meteo_europe.",
+        help="MotherDuck database name. Defaults to MOTHERDUCK_DATABASE or open_meteo_europe_sa.",
     )
     parser.add_argument(
         "--replace",

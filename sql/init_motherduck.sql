@@ -1,5 +1,5 @@
-CREATE DATABASE IF NOT EXISTS open_meteo_europe;
-USE open_meteo_europe;
+CREATE DATABASE IF NOT EXISTS open_meteo_europe_sa;
+USE open_meteo_europe_sa;
 
 CREATE SCHEMA IF NOT EXISTS raw;
 CREATE SCHEMA IF NOT EXISTS staging;

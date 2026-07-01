@@ -2,7 +2,7 @@ version: 2
 
 sources:
   - name: open_meteo
-    database: "{{ env_var('MOTHERDUCK_DATABASE', 'open_meteo_europe') }}"
+    database: "{{ env_var('MOTHERDUCK_DATABASE', 'open_meteo_europe_sa') }}"
     schema: raw
     description: Raw Open-Meteo data loaded into MotherDuck.
     tables:
