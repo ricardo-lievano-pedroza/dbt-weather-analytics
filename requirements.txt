@@ -4,5 +4,7 @@ python-dotenv
 streamlit>=1.36
 plotly>=5.20
 pydeck>=0.9
+folium>=0.16
+streamlit-folium>=0.21
 pandas>=2.0
 numpy>=1.26
