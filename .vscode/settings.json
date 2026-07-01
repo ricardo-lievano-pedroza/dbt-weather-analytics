@@ -9,5 +9,6 @@
         "**/dbt_packages": true,
         "**/target": true,
         "**/logs": true
-    }
+    },
+    "dbt.perspectiveTheme": "Vintage"
 }

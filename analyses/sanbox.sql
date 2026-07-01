@@ -1,1 +1,1 @@
-select distinct "date" from {{ ref('mart_forecast_upcoming') }} 
+select distinct "date" from {{ ref('stg_weather_daily') }} 

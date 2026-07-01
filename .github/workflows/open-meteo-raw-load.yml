@@ -23,7 +23,7 @@ jobs:
   extract-and-load:
     runs-on: ubuntu-latest
     env:
-      MOTHERDUCK_DATABASE: open_meteo_europe
+      MOTHERDUCK_DATABASE: open_meteo_europe_sa
       MOTHERDUCK_TOKEN: ${{ secrets.MOTHERDUCK_TOKEN }}
 
     steps:
