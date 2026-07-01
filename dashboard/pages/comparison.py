@@ -1,160 +1,157 @@
 import streamlit as st
 import plotly.graph_objects as go
-import plotly.express as px
 import pandas as pd
 import numpy as np
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from utils.db import forecast_upcoming, latest_conditions
+from utils.db import forecast_upcoming
+from utils import theme as rv
 
+MAX_CITIES = 6
+
+# label -> (column, normalize-to-0-100 where higher = better, decimals)
 METRICS = {
-    "Avg Temp (°C)":    "fcst_temperature_2m_mean",
-    "Max Temp (°C)":    "fcst_temperature_2m_max",
-    "Min Temp (°C)":    "fcst_temperature_2m_min",
-    "Precip (mm)":      "fcst_precipitation_sum",
-    "Wind (km/h)":      "fcst_wind_speed_10m_max",
-    "Visit Score":      "visit_score",
+    "Avg temp (°C)": ("fcst_temperature_2m_mean", lambda v: np.clip((v + 5) / 45 * 100, 0, 100), 1),
+    "Max temp (°C)": ("fcst_temperature_2m_max",  lambda v: np.clip(v / 45 * 100, 0, 100), 1),
+    "Min temp (°C)": ("fcst_temperature_2m_min",  lambda v: np.clip((v + 10) / 50 * 100, 0, 100), 1),
+    "Precip (mm)":   ("fcst_precipitation_sum",   lambda v: np.clip((1 - v / 20) * 100, 0, 100), 1),
+    "Wind (km/h)":   ("fcst_wind_speed_10m_max",  lambda v: np.clip((1 - v / 80) * 100, 0, 100), 1),
+    "Visit score":   ("visit_score",              lambda v: np.clip(v, 0, 100), 0),
 }
 
-RADAR_NORMALIZE = {
-    "Avg Temp (°C)":  (lambda v: np.clip((v + 5) / 45 * 100, 0, 100)),
-    "Max Temp (°C)":  (lambda v: np.clip(v / 45 * 100, 0, 100)),
-    "Min Temp (°C)":  (lambda v: np.clip((v + 10) / 50 * 100, 0, 100)),
-    "Precip (mm)":    (lambda v: np.clip((1 - v / 20) * 100, 0, 100)),
-    "Wind (km/h)":    (lambda v: np.clip((1 - v / 80) * 100, 0, 100)),
-    "Visit Score":    (lambda v: v),
-}
-
-CITY_COLORS = px.colors.qualitative.Safe
+SCOPES = ["7-day average", "Today only", "Tomorrow only"]
 
 
-def _heatmap(pivot: pd.DataFrame, metric_labels: list[str]) -> go.Figure:
-    z = pivot.values.astype(float)
-    fig = go.Figure(go.Heatmap(
-        z=z,
-        x=metric_labels,
-        y=pivot.index.tolist(),
-        colorscale="RdYlGn",
-        text=np.round(z, 1),
-        texttemplate="%{text}",
-        hovertemplate="%{y} · %{x}: %{z:.1f}<extra></extra>",
-        showscale=True,
-    ))
-    fig.update_layout(
-        height=350,
-        margin=dict(l=120, r=20, t=30, b=80),
-        xaxis=dict(tickangle=-30),
-    )
-    return fig
+def _segmented(label, options, key):
+    if hasattr(st, "segmented_control"):
+        return st.segmented_control(label, options, default=options[0], key=key) or options[0]
+    return st.radio(label, options, horizontal=True, key=key)
 
 
-def _radar(city_values: dict[str, list[float]], metric_labels: list[str]) -> go.Figure:
+def _rgba(hexc, a):
+    hexc = hexc.lstrip("#")
+    r, g, b = int(hexc[0:2], 16), int(hexc[2:4], 16), int(hexc[4:6], 16)
+    return f"rgba({r},{g},{b},{a})"
+
+
+def _default_cities(fcst, all_cities):
+    if "visit_score" in fcst.columns:
+        ranked = fcst.groupby("city_name")["visit_score"].mean().sort_values(ascending=False)
+        return ranked.head(4).index.tolist()
+    return all_cities[:4]
+
+
+def _radar(agg, cities, theme):
+    t = rv.THEMES[theme]
+    palette = rv.SERIES[theme]
+    labels = list(METRICS.keys())
+    theta = labels + [labels[0]]
     fig = go.Figure()
-    theta = metric_labels + [metric_labels[0]]
-    for i, (city, vals) in enumerate(city_values.items()):
-        r = vals + [vals[0]]
+    for i, city in enumerate(cities):
+        if city not in agg.index:
+            continue
+        vals = []
+        for label, (col, norm, _) in METRICS.items():
+            raw = agg.loc[city, col] if col in agg.columns else np.nan
+            vals.append(float(norm(raw)) if pd.notna(raw) else 0.0)
+        color = palette[i % len(palette)]
         fig.add_trace(go.Scatterpolar(
-            r=r, theta=theta, fill="toself",
-            name=city,
-            line=dict(color=CITY_COLORS[i % len(CITY_COLORS)]),
-            opacity=0.75,
+            r=vals + [vals[0]], theta=theta, name=city, mode="lines",
+            line=dict(color=color, width=2), fill="toself", fillcolor=_rgba(color, 0.10),
         ))
     fig.update_layout(
-        polar=dict(radialaxis=dict(range=[0, 100], tickfont_size=10)),
-        height=420,
-        legend=dict(orientation="h", yanchor="bottom", y=-0.25),
-        margin=dict(l=40, r=40, t=40, b=80),
+        height=440, paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="Inter, system-ui, sans-serif", color=t["faint"], size=12),
+        polar=dict(
+            bgcolor="rgba(0,0,0,0)",
+            radialaxis=dict(range=[0, 100], gridcolor=t["divider"], linecolor=t["divider"],
+                            tickfont=dict(size=9, color=t["faint"])),
+            angularaxis=dict(gridcolor=t["divider"], linecolor=t["divider"],
+                             tickfont=dict(color=t["text"], size=11)),
+        ),
+        legend=dict(orientation="h", yanchor="bottom", y=-0.12, x=0,
+                    font=dict(color=t["text"], size=12), bgcolor="rgba(0,0,0,0)"),
+        margin=dict(l=40, r=40, t=20, b=50), showlegend=True,
     )
     return fig
 
 
-def _bar_ranking(df: pd.DataFrame, col: str, label: str) -> go.Figure:
-    sdf = df.sort_values(col, ascending=True)
-    fig = go.Figure(go.Bar(
-        x=sdf[col], y=sdf["city_name"],
-        orientation="h",
-        marker_color=CITY_COLORS[:len(sdf)],
-    ))
-    fig.update_layout(
-        title=label, height=250,
-        margin=dict(l=100, r=20, t=40, b=20),
-        xaxis_title=label,
-    )
-    return fig
+def _cell(v, colmax, is_score, dec):
+    if v is None or pd.isna(v):
+        return "<td>—</td>"
+    width = max(0, min(100, v / colmax * 100)) if colmax else 0
+    color = rv.ROLES[rv.score_role(v)][4] if is_score else "var(--rv-primary)"
+    return (f"<td class='rv-num'>{v:.{dec}f}"
+            f"<div class='rv-cellbar'><span style='width:{width:.0f}%;background:{color}'></span></div></td>")
+
+
+def _table_html(agg, cities):
+    labels = list(METRICS.keys())
+    colmax = {}
+    for label, (col, _, _) in METRICS.items():
+        vals = [agg.loc[c, col] for c in cities
+                if c in agg.index and col in agg.columns and pd.notna(agg.loc[c, col])]
+        colmax[label] = max(vals) if vals else 0
+    head = "<tr><th>City</th>" + "".join(f"<th>{l}</th>" for l in labels) + "</tr>"
+    body = []
+    for city in cities:
+        cells = [f"<td class='rv-td-city'>{city}</td>"]
+        for label, (col, _, dec) in METRICS.items():
+            v = agg.loc[city, col] if (city in agg.index and col in agg.columns) else np.nan
+            cells.append(_cell(v, colmax[label], label == "Visit score", dec))
+        body.append("<tr>" + "".join(cells) + "</tr>")
+    return f"<table class='rv-tbl'>{head}{''.join(body)}</table>"
 
 
 def show():
-    st.title("⚖ Comparison")
+    theme = st.session_state.get("theme", "light")
 
-    with st.spinner("Loading…"):
+    with st.spinner("Loading forecast data…"):
         fcst = forecast_upcoming()
-        lc   = latest_conditions()
 
     if fcst.empty:
-        st.warning("No data found.")
+        st.warning("No forecast data found. Run `dbt build` to build the mart models.")
         return
 
-    cities = sorted(fcst["city_name"].unique().tolist())
-    scope_opts = ["7-day average", "Today only", "Tomorrow only"]
-    col1, col2 = st.columns(2)
-    with col1:
-        scope = st.selectbox("Scope", scope_opts)
-    with col2:
-        selected_cities = st.multiselect("Cities", cities, key="comparison_cities")
+    fcst = fcst.copy()
+    fcst["date"] = pd.to_datetime(fcst["date"])
+    all_cities = sorted(fcst["city_name"].unique().tolist())
 
-    if not selected_cities:
+    with st.container(border=True):
+        c1, c2 = st.columns([2, 5])
+        with c1:
+            scope = _segmented("Scope", SCOPES, "cmp_scope")
+        with c2:
+            selected = st.multiselect(
+                "Cities (up to 6)", all_cities, default=_default_cities(fcst, all_cities),
+                max_selections=MAX_CITIES, key="cmp_cities",
+            )
+
+    if not selected:
         st.info("Select at least one city.")
         return
 
-    sub = fcst[fcst["city_name"].isin(selected_cities)].copy()
+    sub = fcst[fcst["city_name"].isin(selected)].copy()
     dates = sorted(sub["date"].unique())
-
-    if scope == "Today only" and len(dates) > 0:
+    if scope == "Today only" and dates:
         sub = sub[sub["date"] == dates[0]]
     elif scope == "Tomorrow only" and len(dates) > 1:
         sub = sub[sub["date"] == dates[1]]
 
-    agg = (
-        sub.groupby("city_name")[list(METRICS.values())]
-        .mean()
-        .reindex(selected_cities)
-        .round(1)
-    )
+    metric_cols = [col for _, (col, _, _) in METRICS.items() if col in sub.columns]
+    agg = sub.groupby("city_name")[metric_cols].mean().reindex(selected).round(2)
 
-    st.subheader("Heatmap — all metrics at a glance")
-    valid_cols = [c for c in METRICS.values() if c in agg.columns]
-    valid_labels = [k for k, v in METRICS.items() if v in agg.columns]
-    if valid_cols:
-        fig_hm = _heatmap(agg[valid_cols], valid_labels)
-        st.plotly_chart(fig_hm, use_container_width=True)
-
-    col_left, col_right = st.columns(2)
-    with col_left:
-        st.subheader("Radar / Profile chart")
-        radar_data = {}
-        for city in selected_cities:
-            if city not in agg.index:
-                continue
-            vals = []
-            for label, col in METRICS.items():
-                if col in agg.columns:
-                    norm_fn = RADAR_NORMALIZE.get(label, lambda v: v)
-                    raw = agg.loc[city, col]
-                    vals.append(float(norm_fn(raw)) if pd.notna(raw) else 0.0)
-            radar_data[city] = vals
-        if radar_data:
-            st.plotly_chart(_radar(radar_data, valid_labels), use_container_width=True)
-
-    with col_right:
-        st.subheader("Ranking bars")
-        rank_col = st.selectbox("Rank by", valid_labels, index=min(5, len(valid_labels) - 1))
-        rank_field = METRICS[rank_col]
-        rank_df = agg[[rank_field]].reset_index().dropna()
-        if not rank_df.empty:
-            st.plotly_chart(_bar_ranking(rank_df, rank_field, rank_col), use_container_width=True)
-
-    st.divider()
-    st.subheader("Summary table")
-    display = agg[valid_cols].copy()
-    display.columns = valid_labels
-    st.dataframe(display, use_container_width=True)
+    left, right = st.columns([5, 6])
+    with left:
+        with st.container(border=True):
+            st.markdown('<div class="rv-cardtitle">Profile comparison</div>'
+                        '<div class="rv-cardsub">Each axis normalized 0–100, higher is better.</div>',
+                        unsafe_allow_html=True)
+            st.plotly_chart(_radar(agg, selected, theme), use_container_width=True,
+                            config={"displayModeBar": False})
+    with right:
+        with st.container(border=True):
+            st.markdown('<div class="rv-cardtitle">Metric comparison</div>'
+                        '<div class="rv-cardsub">Bars show each value relative to the column maximum.</div>',
+                        unsafe_allow_html=True)
+            st.markdown(_table_html(agg, selected), unsafe_allow_html=True)

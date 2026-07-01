@@ -1,26 +1,34 @@
 import streamlit as st
 import plotly.graph_objects as go
-import plotly.express as px
 import pandas as pd
-import numpy as np
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from utils.db import forecast_upcoming, latest_conditions
+from utils.db import forecast_upcoming
+from utils import theme as rv
 
-CITY_COLORS = px.colors.qualitative.Safe
+MAX_CITIES = 6
 
+# activity preset -> temp / rain / wind weights (no emojis)
 PRESETS = {
-    "Custom":         None,
-    "☀️ Beach Day":   dict(w_temp=0.50, w_rain=0.30, w_wind=0.20),
-    "🥾 Hiking":      dict(w_temp=0.40, w_rain=0.35, w_wind=0.25),
-    "🏙 City Walk":   dict(w_temp=0.35, w_rain=0.45, w_wind=0.20),
-    "⛷ Skiing":       dict(w_temp=0.20, w_rain=0.45, w_wind=0.35),
+    "Custom":    None,
+    "Beach day": dict(w_temp=0.50, w_rain=0.30, w_wind=0.20),
+    "Hiking":    dict(w_temp=0.40, w_rain=0.35, w_wind=0.25),
+    "City walk": dict(w_temp=0.35, w_rain=0.45, w_wind=0.20),
+    "Skiing":    dict(w_temp=0.20, w_rain=0.45, w_wind=0.35),
 }
 
-SCORE_MEDAL = ["🥇", "🥈", "🥉"]
+
+def _segmented(label, options, key):
+    if hasattr(st, "segmented_control"):
+        return st.segmented_control(label, options, default=options[0], key=key) or options[0]
+    return st.radio(label, options, horizontal=True, key=key)
 
 
-def _recompute_score(df: pd.DataFrame, w_temp: float, w_rain: float, w_wind: float) -> pd.Series:
+def _f(v, dec=1):
+    return "—" if v is None or (isinstance(v, float) and pd.isna(v)) else f"{v:.{dec}f}"
+
+
+def _recompute_score(df, w_temp, w_rain, w_wind):
     total = w_temp + w_rain + w_wind
     w_temp, w_rain, w_wind = w_temp / total, w_rain / total, w_wind / total
     return (
@@ -30,152 +38,156 @@ def _recompute_score(df: pd.DataFrame, w_temp: float, w_rain: float, w_wind: flo
     ).round(1)
 
 
-def _leaderboard(ranked: pd.DataFrame) -> None:
-    for i, (_, row) in enumerate(ranked.iterrows()):
-        medal = SCORE_MEDAL[i] if i < 3 else f"#{i + 1}"
-        score = row["composite_score"]
-        bar_color = "#2ecc71" if score >= 70 else "#f39c12" if score >= 45 else "#e74c3c"
-        cols = st.columns([1, 4, 3])
-        with cols[0]:
-            st.markdown(f"<div style='font-size:1.5rem;text-align:center'>{medal}</div>",
-                        unsafe_allow_html=True)
-        with cols[1]:
-            st.markdown(f"**{row['city_name']}**  \n"
-                        f"<small>{row.get('condition_label', '')}</small>",
-                        unsafe_allow_html=True)
-        with cols[2]:
-            st.markdown(
-                f"<div style='background:{bar_color};border-radius:4px;"
-                f"padding:4px 10px;color:white;text-align:center;font-weight:700'>"
-                f"{score:.0f} / 100</div>",
-                unsafe_allow_html=True,
-            )
+def _default_cities(fcst, all_cities):
+    if "visit_score" in fcst.columns:
+        ranked = fcst.groupby("city_name")["visit_score"].mean().sort_values(ascending=False)
+        return ranked.head(MAX_CITIES).index.tolist()
+    return all_cities[:MAX_CITIES]
 
 
-def _score_breakdown(ranked: pd.DataFrame, w_temp: float, w_rain: float, w_wind: float) -> go.Figure:
-    fig = go.Figure()
+def _hero_html(top):
+    score = top["composite_score"]
+    cond = top.get("condition_label") or ""
+    return (
+        "<div class='rv-hero'><div>"
+        "<div class='rv-eyebrow'>Top recommendation</div>"
+        f"<div class='rv-hero-city'>{top['city_name']}</div>"
+        f"<div class='rv-hero-sub'>{cond} · best match for your preferences</div></div>"
+        "<div style='text-align:right'>"
+        f"<div class='rv-hero-score'>{score:.0f}<span class='rv-hero-max'>/100</span></div>"
+        "<div class='rv-eyebrow'>match score</div></div></div>"
+    )
+
+
+def _leaderboard_html(ranked, start_rank):
+    rows = []
+    for i, (_, r) in enumerate(ranked.iterrows()):
+        score = r["composite_score"]
+        color = rv.ROLES[rv.score_role(score)][4]
+        width = max(0, min(100, score))
+        rows.append(
+            "<div class='rv-lrow'>"
+            f"<span class='rv-rank'>#{start_rank + i}</span>"
+            f"<span class='rv-lcity'>{r['city_name']}</span>"
+            f"{rv.condition_pill(r.get('condition_label'))}"
+            f"<div class='rv-lbar'><span style='width:{width:.0f}%;background:{color}'></span></div>"
+            f"<span class='rv-lscore'>{score:.0f}/100</span>"
+            "</div>"
+        )
+    return "".join(rows)
+
+
+def _breakdown(ranked, w_temp, w_rain, w_wind, theme):
+    t = rv.THEMES[theme]
     total = w_temp + w_rain + w_wind
     w_t, w_r, w_w = w_temp / total, w_rain / total, w_wind / total
-
     cities = ranked["city_name"].tolist()
-
-    fig.add_bar(name="Temp comfort",
-                x=cities,
-                y=(ranked["temp_comfort_score"].fillna(0) * w_t).round(1),
-                marker_color="#ef4444")
-    fig.add_bar(name="Low rain",
-                x=cities,
-                y=(ranked["rain_score"].fillna(0) * w_r).round(1),
-                marker_color="#3b82f6")
-    fig.add_bar(name="Low wind",
-                x=cities,
-                y=(ranked["wind_score"].fillna(0) * w_w).round(1),
-                marker_color="#8b5cf6")
-
+    fig = go.Figure()
+    fig.add_bar(name="Temp comfort", x=cities,
+                y=(ranked["temp_comfort_score"].fillna(0) * w_t).round(1), marker_color=rv.PRIMARY)
+    fig.add_bar(name="Low rain", x=cities,
+                y=(ranked["rain_score"].fillna(0) * w_r).round(1), marker_color="#00a87e")
+    fig.add_bar(name="Low wind", x=cities,
+                y=(ranked["wind_score"].fillna(0) * w_w).round(1), marker_color="#ec7e00")
     fig.update_layout(
-        barmode="stack",
-        height=320,
-        yaxis_title="Score (pts)",
-        legend=dict(orientation="h", yanchor="bottom", y=1.02),
-        margin=dict(l=40, r=20, t=40, b=40),
+        barmode="stack", height=340, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="Inter, system-ui, sans-serif", color=t["faint"], size=12),
+        yaxis=dict(title="Score (pts)", gridcolor=t["divider"], zeroline=False),
+        xaxis=dict(showgrid=False),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0,
+                    font=dict(color=t["text"], size=12), bgcolor="rgba(0,0,0,0)"),
+        hoverlabel=dict(bgcolor=t["surface"], bordercolor=t["hairline"], font=dict(color=t["text"])),
+        margin=dict(l=45, r=20, t=40, b=40),
     )
     return fig
 
 
-def _best_day_finder(fcst: pd.DataFrame, cities: list[str],
-                     w_temp: float, w_rain: float, w_wind: float) -> None:
-    st.subheader("Best day to visit each city")
+def _best_day_html(fcst, cities, w_temp, w_rain, w_wind):
     fcst = fcst.copy()
     fcst["composite_score"] = _recompute_score(fcst, w_temp, w_rain, w_wind)
     best = (
         fcst[fcst["city_name"].isin(cities)]
         .sort_values("composite_score", ascending=False)
-        .groupby("city_name")
-        .first()
-        .reset_index()[["city_name", "date", "composite_score", "condition_label",
-                         "fcst_temperature_2m_mean", "fcst_precipitation_sum",
-                         "fcst_wind_speed_10m_max"]]
+        .groupby("city_name").first().reset_index()
+        .sort_values("composite_score", ascending=False)
     )
-    st.dataframe(
-        best.rename(columns={
-            "city_name": "City", "date": "Best Date",
-            "composite_score": "Score",
-            "condition_label": "Condition",
-            "fcst_temperature_2m_mean": "Avg Temp (°C)",
-            "fcst_precipitation_sum": "Precip (mm)",
-            "fcst_wind_speed_10m_max": "Wind (km/h)",
-        }),
-        use_container_width=True,
-        hide_index=True,
-    )
+    head = ("<tr><th>City</th><th>Best date</th><th>Match</th><th>Avg °C</th>"
+            "<th>Precip mm</th><th>Wind km/h</th><th>Condition</th></tr>")
+    body = []
+    for _, r in best.iterrows():
+        d = pd.to_datetime(r["date"]).strftime("%b %d")
+        body.append(
+            "<tr>"
+            f"<td class='rv-td-city'>{r['city_name']}</td><td>{d}</td>"
+            f"<td>{rv.score_bar(r['composite_score'])}</td>"
+            f"<td class='rv-num'>{_f(r.get('fcst_temperature_2m_mean'))}</td>"
+            f"<td class='rv-num'>{_f(r.get('fcst_precipitation_sum'))}</td>"
+            f"<td class='rv-num'>{_f(r.get('fcst_wind_speed_10m_max'))}</td>"
+            f"<td>{rv.condition_pill(r.get('condition_label'))}</td></tr>"
+        )
+    return f"<table class='rv-tbl'>{head}{''.join(body)}</table>"
 
 
 def show():
-    st.title("🏆 Recommendations")
+    theme = st.session_state.get("theme", "light")
 
-    with st.spinner("Loading…"):
+    with st.spinner("Loading forecast data…"):
         fcst = forecast_upcoming()
-        lc   = latest_conditions()
 
     if fcst.empty:
-        st.warning("No forecast data found.")
+        st.warning("No forecast data found. Run `dbt build` to build the mart models.")
         return
 
-    cities_all = sorted(fcst["city_name"].unique().tolist())
+    fcst = fcst.copy()
+    fcst["date"] = pd.to_datetime(fcst["date"])
+    all_cities = sorted(fcst["city_name"].unique().tolist())
 
-    st.subheader("Preferences")
+    st.session_state.setdefault("w_temp", 4)
+    st.session_state.setdefault("w_rain", 3)
+    st.session_state.setdefault("w_wind", 2)
 
-    preset_key = st.selectbox("Activity preset", list(PRESETS.keys()))
-    preset = PRESETS[preset_key]
+    with st.container(border=True):
+        st.markdown('<div class="rv-cardtitle">Preferences</div>'
+                    '<div class="rv-cardsub">Pick an activity or set the weights yourself.</div>',
+                    unsafe_allow_html=True)
+        preset_key = _segmented("Activity preset", list(PRESETS.keys()), "rec_preset")
+        preset = PRESETS[preset_key]
+        if preset and st.session_state.get("_rec_last_preset") != preset_key:
+            st.session_state["w_temp"] = round(preset["w_temp"] * 10)
+            st.session_state["w_rain"] = round(preset["w_rain"] * 10)
+            st.session_state["w_wind"] = round(preset["w_wind"] * 10)
+        st.session_state["_rec_last_preset"] = preset_key
+        w1, w2, w3 = st.columns(3)
+        w_temp = w1.slider("Temperature weight", 0, 10, key="w_temp")
+        w_rain = w2.slider("Rain weight", 0, 10, key="w_rain")
+        w_wind = w3.slider("Wind weight", 0, 10, key="w_wind")
 
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        w_temp = st.slider(
-            "Temperature weight", 0, 10,
-            int((preset["w_temp"] if preset else 0.40) * 10),
-            key="w_temp",
-        )
-    with col2:
-        w_rain = st.slider(
-            "Rain weight", 0, 10,
-            int((preset["w_rain"] if preset else 0.35) * 10),
-            key="w_rain",
-        )
-    with col3:
-        w_wind = st.slider(
-            "Wind weight", 0, 10,
-            int((preset["w_wind"] if preset else 0.25) * 10),
-            key="w_wind",
-        )
-
-    total_w = w_temp + w_rain + w_wind
-    if total_w == 0:
-        st.warning("At least one weight must be > 0.")
+    if w_temp + w_rain + w_wind == 0:
+        st.warning("Set at least one weight above zero.")
         return
 
-    st.divider()
-    st.subheader("Hard filters")
-    f1, f2 = st.columns(2)
-    with f1:
-        max_rain = st.slider("Max precipitation (mm)", 0, 30, 30)
-    with f2:
-        temp_range = st.slider("Acceptable mean temp (°C)", -20, 50, (-5, 40))
+    with st.container(border=True):
+        f1, f2, f3 = st.columns([2, 2, 3])
+        with f1:
+            max_rain = st.slider("Max precipitation (mm)", 0, 30, 30, key="rec_maxrain")
+        with f2:
+            temp_range = st.slider("Acceptable mean temp (°C)", -20, 50, (-5, 40), key="rec_temprange")
+        with f3:
+            selected = st.multiselect(
+                "Cities (up to 6)", all_cities, default=_default_cities(fcst, all_cities),
+                max_selections=MAX_CITIES, key="rec_cities",
+            )
 
-    with st.expander("Select cities to compare"):
-        selected_cities = st.multiselect("Cities", cities_all, key="recommendations_cities")
-
-    if not selected_cities:
+    if not selected:
         st.info("Select at least one city.")
         return
 
-    sub = fcst[fcst["city_name"].isin(selected_cities)].copy()
-
+    sub = fcst[fcst["city_name"].isin(selected)].copy()
     sub = sub[
         (sub["fcst_precipitation_sum"].fillna(0) <= max_rain)
         & (sub["fcst_temperature_2m_mean"].fillna(20) >= temp_range[0])
         & (sub["fcst_temperature_2m_mean"].fillna(20) <= temp_range[1])
     ]
-
     if sub.empty:
         st.warning("All data filtered out — loosen the hard filters.")
         return
@@ -183,9 +195,7 @@ def show():
     sub["composite_score"] = _recompute_score(sub, w_temp, w_rain, w_wind)
     city_scores = (
         sub.groupby("city_name")[["composite_score", "temp_comfort_score", "rain_score", "wind_score"]]
-        .mean()
-        .round(1)
-        .reset_index()
+        .mean().round(1).reset_index()
         .sort_values("composite_score", ascending=False)
     )
     condition_mode = (
@@ -195,20 +205,25 @@ def show():
     )
     city_scores = city_scores.merge(condition_mode, on="city_name", how="left")
 
-    st.subheader("City Leaderboard")
-    _leaderboard(city_scores)
+    with st.container(border=True):
+        rows = _leaderboard_html(city_scores.iloc[1:], start_rank=2) if len(city_scores) > 1 else ""
+        st.markdown(
+            _hero_html(city_scores.iloc[0])
+            + ('<div class="rv-section">Full ranking</div>' + rows if rows else ""),
+            unsafe_allow_html=True,
+        )
 
-    st.divider()
-    col_l, col_r = st.columns(2)
-    with col_l:
-        st.subheader("Score breakdown")
-        st.plotly_chart(
-            _score_breakdown(city_scores, w_temp, w_rain, w_wind),
-            use_container_width=True,
-        )
-    with col_r:
-        _best_day_finder(
-            fcst[fcst["city_name"].isin(selected_cities)],
-            selected_cities,
-            w_temp, w_rain, w_wind,
-        )
+    left, right = st.columns(2)
+    with left:
+        with st.container(border=True):
+            st.markdown('<div class="rv-cardtitle">Score breakdown</div>'
+                        '<div class="rv-cardsub">How each city\'s match score is built from your weights.</div>',
+                        unsafe_allow_html=True)
+            st.plotly_chart(_breakdown(city_scores, w_temp, w_rain, w_wind, theme),
+                            use_container_width=True, config={"displayModeBar": False})
+    with right:
+        with st.container(border=True):
+            st.markdown('<div class="rv-cardtitle">Best day to visit each city</div>'
+                        '<div class="rv-cardsub">The highest-scoring day in the forecast window.</div>',
+                        unsafe_allow_html=True)
+            st.markdown(_best_day_html(sub, selected, w_temp, w_rain, w_wind), unsafe_allow_html=True)
