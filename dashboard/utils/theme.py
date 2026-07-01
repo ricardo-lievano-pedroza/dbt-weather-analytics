@@ -75,8 +75,7 @@ h1,h2,h3,h4{color:var(--rv-text)!important;font-family:'Inter',system-ui,sans-se
   transition:border-color .2s ease-out,transform .1s ease-out;}
 .stButton>button:hover{border-color:var(--rv-primary);color:var(--rv-text);}
 .stButton>button:active{transform:scale(.97);}
-[data-testid="stVerticalBlockBorderWrapper"]{border-radius:20px;}
-div[data-testid="stVerticalBlockBorderWrapper"]:has(>div>div>[data-testid="stHorizontalBlock"]){
+[data-testid="stVerticalBlockBorderWrapper"]{border-radius:20px;
   border:1px solid var(--rv-hairline);background:var(--rv-surface);}
 
 .rv-brand{font-family:'Space Grotesk','Inter',sans-serif;font-size:20px;font-weight:500;
@@ -114,6 +113,19 @@ div[data-testid="stVerticalBlockBorderWrapper"]:has(>div>div>[data-testid="stHor
 .rv-bar>span{display:block;height:6px;border-radius:999px;animation:rvGrow .7s ease-out;}
 .rv-score-label{font-size:11px;color:var(--rv-faint);margin-top:8px;}
 .rv-spark{width:100%;height:46px;margin-top:12px;display:block;}
+
+.rv-cardtitle{font-size:14px;font-weight:500;color:var(--rv-text);}
+.rv-cardsub{font-size:11px;color:var(--rv-faint);margin:2px 0 8px;}
+.rv-tbl{width:100%;border-collapse:collapse;font-size:13px;}
+.rv-tbl th{text-align:left;font-weight:400;color:var(--rv-faint);font-size:11px;letter-spacing:.3px;
+  padding:9px 12px;border-bottom:1px solid var(--rv-hairline);}
+.rv-tbl td{padding:10px 12px;border-bottom:1px solid var(--rv-divider);color:var(--rv-text);}
+.rv-tbl tr:hover td{background:var(--rv-track);}
+.rv-num{font-variant-numeric:tabular-nums;}
+.rv-td-city{font-weight:500;}
+.rv-sc{display:flex;align-items:center;gap:8px;}
+.rv-scbar{width:56px;height:5px;border-radius:999px;background:var(--rv-track);overflow:hidden;}
+.rv-scbar>span{display:block;height:5px;border-radius:999px;}
 
 @keyframes rvIn{from{opacity:0;transform:translateY(6px);}}
 @keyframes rvGrow{from{width:0;}}
@@ -208,6 +220,26 @@ def score_role(score):
 def _pill_colors(role):
     dbg, dtx, lbg, ltx, _ = ROLES.get(role, ROLES["neutral"])
     return (dbg, dtx) if st.session_state.get("theme") == "dark" else (lbg, ltx)
+
+
+def condition_pill(condition):
+    """Line-icon + colored condition pill (reused across pages)."""
+    condition = condition or "Mixed"
+    icon, role = CONDITIONS.get(condition, ("ti-cloud", "neutral"))
+    bg, tx = _pill_colors(role)
+    return (f'<span class="rv-pill" style="background:{bg};color:{tx}">'
+            f'<i class="ti {icon}"></i>{condition}</span>')
+
+
+def score_bar(score):
+    """A visit-score cell: a colored progress bar plus the value (— if missing)."""
+    if not _is_num(score):
+        return '<div class="rv-sc"><div class="rv-scbar"></div><span>—</span></div>'
+    color = ROLES[score_role(score)][4]
+    width = max(0, min(100, score))
+    return (f'<div class="rv-sc"><div class="rv-scbar">'
+            f'<span style="width:{width:.0f}%;background:{color}"></span></div>'
+            f'<span>{score:.0f}</span></div>')
 
 
 def _sparkline(city, fcst_df, color):
