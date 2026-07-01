@@ -6,6 +6,8 @@ API, loads it into MotherDuck, transforms it with dbt through staging →
 intermediate → marts layers, and serves the results in a Streamlit dashboard
 that recommends the best European city for a holiday.
 
+**🌤 Live dashboard:** https://dbt-weather-analytics-y8gbhkpnqc27szlu9znbza.streamlit.app/
+
 ## Architecture
 
 ```text
